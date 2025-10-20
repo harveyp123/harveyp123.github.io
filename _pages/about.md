@@ -9,7 +9,7 @@ redirect_from:
 ---
 
 
-I am an Research Scientist/Engineer in the Adobe Research. My current research interest spans across model scaling, mixture of experts(MoE), optimizer, efficient attention for foundation model scaling. I earned my Ph.D. degree from the Department of [Computer Science and Engineering](https://www.cse.uconn.edu/) at [University of Connecticut](https://uconn.edu/) at 2024. I obtained my B.S. degree in electrical engineering from [Huazhong University of Science and Technology](http://english.hust.edu.cn/) in 2018 and and M.S. degree in electrical engineering from [University of Akransas](https://www.uark.edu/) in 2020.
+I am an Research Scientist/Engineer in the Adobe Research. My current research interest spans across scaling, mixture of experts(MoE), optimizer, efficient attention for foundation model pretraining. I earned my Ph.D. degree from the Department of [Computer Science and Engineering](https://www.cse.uconn.edu/) at [University of Connecticut](https://uconn.edu/) at 2024. I obtained my B.S. degree in electrical engineering from [Huazhong University of Science and Technology](http://english.hust.edu.cn/) in 2018 and and M.S. degree in electrical engineering from [University of Akransas](https://www.uark.edu/) in 2020.
 
 I am generally interested in Large Language Model, Image/Video Generation, efficient ML/model scaling, ML system, and secure and Trustworthy AI/ML. My current research focuses are listed as follows:
 
