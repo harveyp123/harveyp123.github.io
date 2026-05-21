@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complete-muE — Tune Dense Once, Transfer to All MoE Configurations</title>
+<meta name="description" content="Complete-muE is a compositional hyperparameter transfer rule for Mixture-of-Experts transformers. Tune a single small dense FFN proxy and transfer the learning rate, weight decay, and initialization near-optimally to any large MoE architecture.">
+<meta name="author" content="Hongwu Peng, Ohiremen Dibua, Yuanjun Xiong, Yifan Gong, Jianming Zhang, Yan Kang (Adobe Research)">
+
+<!-- Open Graph -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="Complete-muE — Small Dense Sweep, Large MoE Deployment">
+<meta property="og:description" content="A compositional hyperparameter transfer rule for Mixture-of-Experts transformers. One small dense calibration delivers consistent gains at large MoE scale across activated experts, capacity, granularity, hybrids, and modalities — with up to 4.5× video and 5.3–5.5× LLM convergence speedup.">
+<meta property="og:image" content="figures/teaser.png">
+
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Complete-muE — Small Dense Sweep, Large MoE Deployment">
+<meta name="twitter:description" content="Small dense calibration. Any large MoE architecture. Up to 4.5× video and 5.3–5.5× LLM convergence speedup.">
+<meta name="twitter:image" content="figures/teaser.png">
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231f5f5b'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='Helvetica' font-size='32' font-weight='700' fill='%23fff'%3E&%23956;E%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Blog post · Adobe Research</p>
+    <h1>Complete-muE</h1>
+    <p class="subtitle">Tune one <em>small</em> dense baseline. Transfer to <em>any</em> large Mixture-of-Experts configuration.</p>
+    <p class="byline">
+      A practitioner-friendly walkthrough of the paper
+      <em>Complete-muE: Optimal Hyperparameter Transfer and Scaling for MoE Models</em>.
+    </p>
+    <p class="authors">
+      <a href="https://harveyp123.github.io/" target="_blank" rel="noopener">Hongwu Peng</a> ·
+      <a href="https://research.adobe.com/person/ohi-dibua/" target="_blank" rel="noopener">Ohiremen Dibua</a> ·
+      <a href="https://yjxiong.me/" target="_blank" rel="noopener">Yuanjun Xiong</a> ·
+      <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a> ·
+      <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a> ·
+      <a href="https://research.adobe.com/person/yan-kang/" target="_blank" rel="noopener">Yan Kang</a>
+      <br>
+      <span class="affil">Adobe Research</span>
+    </p>
+  </div>
+</header>
+
+<figure class="teaser">
+  <img src="figures/teaser.png" alt="Complete-muE transfer paths: dense FFN → Dense MoE via active-width µP, Dense MoE → sparse MoE via expert-side SDE.">
+  <figcaption>Complete-muE composes two bridges: dense FFN ↔ Dense MoE via active-width µP (Bridge I), and Dense MoE ↔ sparse MoE via expert-side SDE (Bridge II). Every other MoE setting — capacity, granularity, hybrids — is a composition of these two.</figcaption>
+</figure>
+
+<nav class="toc" aria-label="Table of contents">
+  <ol>
+    <li><a href="#tldr">TL;DR</a></li>
+    <li><a href="#problem">Why MoE tuning is so painful</a></li>
+    <li><a href="#insight">The core insight: active width + expert workload</a></li>
+    <li><a href="#bridges">Two bridges from dense to any MoE</a></li>
+    <li><a href="#recipe">The recipe in three steps</a></li>
+    <li><a href="#tuning-menu">Tuning menu at a glance</a></li>
+    <li><a href="#calibration">A small honest caveat about drift</a></li>
+    <li><a href="#results">Does it actually work?</a></li>
+    <li><a href="#takeaways">Takeaways</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ============== TL;DR ============== -->
+<section id="tldr">
+  <h2>TL;DR</h2>
+  <div class="callout headline">
+    <p><strong>If you train Mixture-of-Experts (MoE) transformers, you don't need to re-sweep learning rate, weight decay, or init for every architecture.</strong> Tune them once on a small dense FFN proxy, plug the values into a deterministic rule, and they transfer near-optimally to <em>any</em> large MoE configuration — different numbers of activated experts, different total expert counts, different granularities, shared experts, group-balanced routing, width, depth, and batch size.</p>
+    <p>The whole point is the asymmetry: <strong>small dense sweep, large MoE deployment</strong>. Our large-scale runs tune at proxy width $d_\star = 128$ and deploy at $d = 1024$ ($8\times$ wider). At that scale the recipe gives <strong>$\sim\!4.5\times$ convergence speedup</strong> for $240$P $5$s video diffusion and <strong>$\sim\!5.3\text{-}5.5\times$</strong> for LLM training versus a dense baseline at the <em>same</em> hyperparameters.</p>
+  </div>
+  <p class="audience-note">
+    👤 <strong>If you're new to MoE</strong>, the next two sections build the intuition.
+    <br>
+    🛠️ <strong>If you train models for a living</strong>, jump to <a href="#recipe">the recipe</a>.
+    <br>
+    🔬 <strong>If you want the math</strong>, the "under the hood" boxes throughout have the technical details.
+  </p>
+</section>
+
+<!-- ============== PROBLEM ============== -->
+<section id="problem">
+  <h2>Why MoE tuning is so painful</h2>
+  <p>A modern Mixture-of-Experts transformer block has many knobs you can turn:</p>
+  <ul>
+    <li>How wide each expert is ($h$)</li>
+    <li>How many experts the router activates per token ($a$, "activated experts")</li>
+    <li>How many experts exist in total ($N$, "capacity")</li>
+    <li>Granularity (more, smaller experts vs. fewer, larger ones)</li>
+    <li>Shared experts that always fire</li>
+    <li>Group-balanced routing</li>
+    <li>...all on top of the usual width, depth, batch size, and training duration</li>
+  </ul>
+
+  <p>The catch: each of these choices changes <em>two</em> things at once.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>1. The architecture changes</h3>
+      <p>Replacing a dense FFN with an MoE block, or making the experts smaller, alters the parameterized network. Signals propagate differently. Update sizes shift.</p>
+    </div>
+    <div>
+      <h3>2. The data each expert sees changes</h3>
+      <p>An expert only trains on tokens that the router sends to it. With $a$ activated experts out of $N$, each expert sees roughly $a/N$ of the tokens. Change $a$ or $N$ and you've changed each expert's effective batch size and total training duration.</p>
+    </div>
+  </div>
+
+  <p>This double-change is exactly what existing transfer rules <em>cannot</em> handle:</p>
+
+  <ul>
+    <li><strong>$\mu$P</strong> handles changes to a fixed parameterized model very well — it gives you zero-shot width transfer. But it has no slot for the per-expert workload.</li>
+    <li><strong>SDE-based batch/duration rules</strong> handle changes in tokens-per-step for a <em>fixed</em> architecture. They don't apply when the architecture itself changes.</li>
+  </ul>
+
+  <p>So when you go from dense FFN to MoE, or change the MoE capacity, neither tool alone tells you what learning rate to use. Practitioners end up doing what they always did: another hyperparameter sweep. That gets expensive fast.</p>
+</section>
+
+<!-- ============== INSIGHT ============== -->
+<section id="insight">
+  <h2>The core insight: active width + expert workload</h2>
+
+  <p>Complete-muE's main observation is that you can take the messy MoE design space and decompose it into two clean, well-understood steps. Each step changes <em>one</em> thing.</p>
+
+  <div class="callout">
+    <p><strong>Step 1 — Active width.</strong> A sparse MoE block that uses $a$ experts of width $h$ behaves, to first order, like a dense FFN with hidden width $H_a = a \cdot h$. This single quantity — the <em>active width</em> — governs everything that classical $\mu$P knows how to handle.</p>
+    <p><strong>Step 2 — Expert workload.</strong> Once active width is held fixed, the only remaining thing that changes when you flip between dense and sparse, or vary the activated-expert count, is how many tokens each expert sees per step. That's exactly the SDE setting — but applied to the <em>per-expert</em> training process rather than the whole model.</p>
+  </div>
+
+  <p>Decomposing the problem this way is the entire trick. Each step is a known problem with a known answer. The hard MoE-specific cases — total expert count, granularity, hybrids with shared experts and group-balanced routing — turn out to be <em>compositions</em> of these two steps. Nothing new needs to be invented for them.</p>
+</section>
+
+<!-- ============== BRIDGES ============== -->
+<section id="bridges">
+  <h2>Two bridges from dense to any MoE</h2>
+
+  <h3>Bridge I: Dense FFN ↔ Dense MoE</h3>
+  <p>The first bridge says: a dense FFN of width $H$ and a "Dense MoE" with $N$ experts of width $h = H/N$ (every expert active for every token) carry the same forward signal and the same per-step update size, as long as you do two small things:</p>
+  <ul>
+    <li>Use an output multiplier $A = d/H$ on the down-projection (where $d$ is the residual width). This is the standard $\mu$P factor for a width-$H$ FFN.</li>
+    <li>Use a <em>route scale</em> equal to the number of activated experts. Normalized routing averages expert outputs, which would otherwise shrink the update by $1/a$; the route scale undoes that.</li>
+  </ul>
+
+  <div class="under-hood">
+    <p class="hood-label">Under the hood</p>
+    <p>For a unit-expansion dense companion at backbone width $d$, the matching rule for the FFN/MoE output branch is</p>
+    <p>$$A(H) = \frac{d}{H}, \qquad \sigma_{\mathrm{down}}(d, H) = \left(\frac{H}{d}\right)^{1/2} \sigma_{\mathrm{down}}^{(1)}(d), \qquad \eta_{\mathrm{down}}(d, H) = \eta_{\mathrm{down}}^{(1)}(d).$$</p>
+    <p>This is essentially $\mu$P applied to the active width $H$, plus a normalized-route correction $r_a = a$.</p>
+  </div>
+
+  <h3>Bridge II: Dense MoE ↔ Sparse MoE</h3>
+  <p>The second bridge handles the move from a Dense MoE (all $N$ experts active) to a sparse MoE (only $a < N$ active). Once Bridge I is applied at the active width $H_a = ah$, the only remaining change is the per-expert data exposure.</p>
+  <p>Here's the elegant cancellation: when you switch from $a$ activated experts to $a'$ at fixed global batch size and steps, each expert's <em>batch</em> changes by the same factor as its <em>training duration</em>. Both go up or down together by $a'/a$. The standard SDE correction <em>cancels</em>:</p>
+
+  <div class="under-hood">
+    <p class="hood-label">Under the hood</p>
+    <p>$$\rho_B^{\mathrm{exp}} = \frac{B_{\mathrm{exp}}(a')}{B_{\mathrm{exp}}(a)} = \frac{a'}{a}, \qquad \rho_D^{\mathrm{exp}} = \frac{D_{\mathrm{exp}}(a')}{D_{\mathrm{exp}}(a)} = \frac{a'}{a}.$$</p>
+    <p>So the dense-style correction $\eta' \approx \eta\sqrt{\rho_B^{\mathrm{exp}}/\rho_D^{\mathrm{exp}}} = \eta$ — no first-order learning rate or weight decay multiplier is needed.</p>
+  </div>
+
+  <p>What does change is the expert-side noise-to-signal level $\sigma_0(a) = \eta \cdot \sigma_{\mathrm{exp}}(a)$. Making the MoE denser (larger $a$) lowers the per-step gradient noise, which is why denser MoEs can reach lower loss at the same hyperparameters. We'll return to this.</p>
+
+  <h3>Everything else is composition</h3>
+  <p>That's it for new primitives. Every other MoE setting — total capacity, granularity, hybrid blocks with shared experts and grouped routing — is built by composing Bridge I and Bridge II:</p>
+  <ul>
+    <li><strong>Total capacity ($N \to N'$):</strong> first widen the Dense-MoE companion (Bridge I), then re-sparsify back to $a$ active experts (Bridge II). The two factors cancel exactly.</li>
+    <li><strong>Granularity at fixed density ($s = a/N$):</strong> the active width is preserved by construction, so the same sparse-layer rule applies.</li>
+    <li><strong>Hybrid blocks (shared + grouped + routed):</strong> use one common active-width multiplier over the total active width $H_{\mathrm{tot}}$ and apply route scale only to routed branches.</li>
+  </ul>
+</section>
+
+<!-- ============== RECIPE ============== -->
+<section id="recipe">
+  <h2>The recipe in three steps</h2>
+
+  <div class="recipe">
+    <ol>
+      <li><strong>Tune once on a small dense FFN proxy.</strong> Pick a small backbone width (we use $d_\star = 128$), batch size, and a short training duration. Sweep learning rate, weight decay, and initialization on this small dense reference. This is the one and only hyperparameter sweep you do — it stays cheap regardless of how large the target MoE will be.</li>
+      <li><strong>Read the layer-level rule from Table 1 of the paper</strong> for your target MoE block. Compute the active width, look up the output multiplier $A$, the route scale $R$, and the down-projection initialization, then apply them.</li>
+      <li><strong>Compose the global AdamW factors from Table 2</strong> for any width / depth / batch / duration changes. For MoE-specific changes (different $a$, $N$, granularity, shared experts, group-balanced routing), no extra multiplier is needed — Table 1 already absorbed those.</li>
+    </ol>
+  </div>
+
+  <p>Tables 1 and 2 fit on one page. You do not need to re-sweep for any MoE setting once the dense reference is tuned.</p>
+
+  <h3 id="tuning-menu">Tuning menu at a glance</h3>
+  <p>The actual rule is even simpler than it sounds. There is a <em>single</em> active-width $H_{\mathrm{act}}$ that drives every MoE-specific adjustment, plus one routing choice that keeps things clean:</p>
+
+  <div class="menu-block">
+    <p class="menu-section-label">Routing choice</p>
+    <ul class="menu-tight">
+      <li>Use <strong>sigmoid gating</strong> with <strong>normalization over active experts</strong> (so $\sum_{i\in\mathcal{A}(x)}\pi_i(x) = 1$).</li>
+      <li>This makes the routing variance factor $F_{a,N} \approx 1$, so no extra correction is needed.</li>
+    </ul>
+  </div>
+
+  <div class="menu-block">
+    <p class="menu-section-label">What stays at the dense baseline value</p>
+    <ul class="menu-tight keep">
+      <li>Learning rate $\eta$ (the raw value you swept on the dense FFN)</li>
+      <li>Weight decay $\lambda$</li>
+      <li>Backbone-width and depth $\mu$P factors (already standard)</li>
+      <li>No MoE-specific LR/WD multiplier for $a$, $N$, or granularity — Table 1 absorbs those</li>
+    </ul>
+  </div>
+
+  <div class="menu-block">
+    <p class="menu-section-label">What you adjust per layer (MoE-architectural axes — all keyed on $H_{\mathrm{act}}$)</p>
+    <div class="table-scroll">
+      <table class="tuning-menu">
+        <thead>
+          <tr>
+            <th>Knob</th>
+            <th>Rule</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Active width $H_{\mathrm{act}}$</td>
+            <td><code>$H$</code> (dense) <br> <code>$ah$</code> (sparse MoE) <br> <code>$H_{\mathrm{tot}}$</code> (hybrid)</td>
+            <td>The single quantity that drives every rule below.</td>
+          </tr>
+          <tr>
+            <td>Output multiplier $A$</td>
+            <td>$A = d / H_{\mathrm{act}}$</td>
+            <td>Apply to the down-projection of the FFN/MoE branch.</td>
+          </tr>
+          <tr>
+            <td>Route scale $R$</td>
+            <td>$R = a$ (routed sums) <br> $R = 1$ (dense / shared)</td>
+            <td>Only on the normalized routed sum, not on dense/shared branches.</td>
+          </tr>
+          <tr>
+            <td>Down-projection init std</td>
+            <td>$\sigma_{\mathrm{down}} = \sqrt{H_{\mathrm{act}}/d}\,\sigma_{\mathrm{down}}^{(1)}$</td>
+            <td>Scales relative to the unit-expansion dense companion.</td>
+          </tr>
+          <tr>
+            <td>Up / gate projections</td>
+            <td>Standard $\mu$P factors</td>
+            <td>Controlled by backbone width $d$ — no MoE-specific change.</td>
+          </tr>
+          <tr>
+            <td>Router readout</td>
+            <td>Standard $\mu$P factors</td>
+            <td>Treated like any $d$-controlled projection.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="menu-block">
+    <p class="menu-section-label">What you adjust globally when batch / duration change</p>
+    <p style="margin: 0.2rem 0 0.6rem;">If the target differs from the dense calibration in batch size $B$ or total iterations $T$, apply the CompleteP multipliers below on top of the per-layer rule. The general form (from the paper's Table 2) is</p>
+    <p style="text-align: center; margin: 0.4rem 0 0.8rem;">$\eta, \lambda \propto \sqrt{\rho_B/\rho_D}, \qquad \epsilon \propto \sqrt{\rho_D/\rho_B}, \qquad 1{-}\beta_{1,2} \propto \rho_B/\rho_D,$</p>
+    <p style="margin: 0 0 0.8rem;">with $\rho_B = B'/B$ and $\rho_D = (B'T')/(BT)$. Three common instantiations:</p>
+    <div class="table-scroll">
+      <table class="tuning-menu">
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>$\rho_B$</th>
+            <th>$\rho_D$</th>
+            <th>$\eta, \lambda$ ×</th>
+            <th>$\epsilon$ ×</th>
+            <th>$1{-}\beta_{1,2}$ ×</th>
+            <th>Transfer type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Fixed total tokens</strong> <br><span class="menu-sub">batch ↑ $\kappa_B\!\times$, steps ↓ $\kappa_B\!\times$</span></td>
+            <td>$\kappa_B$</td>
+            <td>$1$</td>
+            <td>$\sqrt{\kappa_B}$</td>
+            <td>$1/\sqrt{\kappa_B}$</td>
+            <td>$\kappa_B$</td>
+            <td><span class="badge exact">Exact</span><br><span class="menu-sub">All three SDE objects ($\sigma_0$, $\widetilde\lambda$, $H_{\mathrm{SDE}}$) preserved.</span></td>
+          </tr>
+          <tr>
+            <td><strong>Fixed iterations</strong> <br><span class="menu-sub">batch ↑ $\kappa_B\!\times$, token budget ↑ $\kappa_B\!\times$</span></td>
+            <td>$\kappa_B$</td>
+            <td>$\kappa_B$</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td><span class="badge approx">Approximate</span><br><span class="menu-sub">$\sigma_0$ shifts by $1/\sqrt{\kappa_B}$; optimal LR remains stable empirically.</span></td>
+          </tr>
+          <tr>
+            <td><strong>Fixed batch size</strong> <br><span class="menu-sub">steps ↑ $\kappa_D\!\times$, token budget ↑ $\kappa_D\!\times$</span></td>
+            <td>$1$</td>
+            <td>$\kappa_D$</td>
+            <td>$1/\sqrt{\kappa_D}$</td>
+            <td>$\sqrt{\kappa_D}$</td>
+            <td>$1/\kappa_D$</td>
+            <td><span class="badge approx">Approximate</span><br><span class="menu-sub">Iso-horizon: $H_{\mathrm{SDE}}$ and $\widetilde\lambda$ preserved; $\sigma_0$ shifts by $1/\sqrt{\kappa_D}$.</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="menu-note">"—" means "no change". The "× factor" columns multiply the dense baseline value. For depth changes, also apply the standard CompleteP depth-sensitive residual-branch grouping.</p>
+    <p class="menu-note"><strong>Rule of thumb:</strong> for MoE-architectural axes ($a$, $N$, granularity, hybrid), you change <em>only</em> the per-layer numbers; for batch/duration changes, compose the CompleteP factors above on top.</p>
+  </div>
+
+  <p class="menu-takeaway">In short: pick a routing choice once, compute $H_{\mathrm{act}}$ for your block, derive three numbers ($A$, $R$, $\sigma_{\mathrm{down}}$), apply the CompleteP batch/duration multipliers if the schedule changed, and reuse <em>every</em> other hyperparameter from the dense baseline.</p>
+</section>
+
+<!-- ============== CALIBRATION ============== -->
+<section id="calibration">
+  <h2>A small honest caveat about drift</h2>
+
+  <p>The first-order SDE correction in Bridge II cancels exactly, but there's a second-order effect we want to be upfront about: the per-step expert-side noise $\sigma_0(a)$ shifts when $a$ changes. The change is bounded:</p>
+
+  <p>$$\sigma_0(a') = \frac{\sigma_0(a)}{\sqrt{\rho_B^{\mathrm{exp}}}}.$$</p>
+
+  <p>This means Bridge II is not a <em>strict</em> SDE invariance — it's a relatively stable transfer with some mild residual drift in the optimal hyperparameters. The same kind of bounded drift shows up in two other places in the paper:</p>
+  <ul>
+    <li><strong>Capacity scaling</strong> (varying $N$ at fixed $a, h$), because the composition that builds it uses Bridge II as a sub-step.</li>
+    <li><strong>Batch-size transfer at fixed training iterations</strong>, where the gradient noise $\sigma_0$ shifts even though the optimization horizon $H_{\mathrm{SDE}} = T\eta^2$ is preserved.</li>
+  </ul>
+
+  <p>The empirical question is whether this drift is small enough to ignore in practice. The answer the paper carefully argues — and then demonstrates twice over — is <strong>yes</strong>.</p>
+</section>
+
+<!-- ============== RESULTS ============== -->
+<section id="results">
+  <h2>Does it actually work?</h2>
+
+  <h3>Small-scale: optima align across MoE settings</h3>
+  <p>In controlled language-model and diffusion-transformer proxy sweeps, the loss vs. learning rate curves stay tightly aligned across activated-expert counts — with only the minor drift the theory predicts.</p>
+
+  <figure>
+    <div class="img-pair">
+      <img src="figures/activated_experts_lr_lm.png" alt="LM learning-rate sweep across activated-expert counts.">
+      <img src="figures/activated_experts_lr_df.png" alt="Diffusion learning-rate sweep across activated-expert counts.">
+    </div>
+    <figcaption>Activated-experts learning-rate sweep at fixed total experts and per-expert width, for language-model (left) and diffusion-transformer (right) proxies. The optimal LR region is broad and relatively stable across <code>a</code>, with only the minor drift the theory predicts.</figcaption>
+  </figure>
+
+  <h3>Small-scale: fixed-LR scaling works across MoE axes</h3>
+  <p>The more direct test: fix all AdamW hyperparameters at the dense-tuned values (LM: $\text{LR}=10^{-3}$, init std $=10^{-2}$, $\text{WD}=0.1$; Diffusion: $\text{LR}=1.6\times10^{-3}$, init std $=2\times10^{-2}$, $\text{WD}=10^{-2}$), then scale only the MoE architecture along four axes. Activated experts, total capacity, granularity, and depth all give consistent loss reductions for both modalities — no per-setting retuning.</p>
+
+  <figure>
+    <div class="img-grid-4x2">
+      <img src="figures/fixed_lr_llm_activated.png" alt="Fixed-LR loss scaling — LM, activated experts.">
+      <img src="figures/fixed_lr_df_activated.png" alt="Fixed-LR loss scaling — DF, activated experts.">
+      <img src="figures/fixed_lr_llm_capacity.png" alt="Fixed-LR loss scaling — LM, capacity.">
+      <img src="figures/fixed_lr_df_capacity.png" alt="Fixed-LR loss scaling — DF, capacity.">
+      <img src="figures/fixed_lr_llm_granularity.png" alt="Fixed-LR loss scaling — LM, granularity.">
+      <img src="figures/fixed_lr_df_granularity.png" alt="Fixed-LR loss scaling — DF, granularity.">
+      <img src="figures/fixed_lr_llm_layers.png" alt="Fixed-LR loss scaling — LM, layers.">
+      <img src="figures/fixed_lr_df_layers.png" alt="Fixed-LR loss scaling — DF, layers.">
+    </div>
+    <figcaption>Fixed-hyperparameter loss scaling across MoE axes. Four columns of paired panels — activated experts, total capacity, granularity, layer depth — at one fixed AdamW setting per modality. Each axis gives consistent loss improvement without per-setting retuning. This is the most direct empirical evidence for the "tune dense once, transfer to all" recipe at small scale.</figcaption>
+  </figure>
+
+  <p>One pattern stands out across the four panels: <strong>capacity scaling (more total experts at fixed activated count) drives substantially lower loss than granularity scaling</strong> at the same fixed hyperparameters. Among the MoE quality knobs, total-expert count is the strongest lever per unit of training compute — which, conveniently, is also the cheapest one to scale, as we'll see in the systems benchmark below.</p>
+
+  <h3>Large-scale: small dense calibration → large MoE deployment, five training regimes</h3>
+  <div class="callout">
+    <p>The point of the recipe is the asymmetry: <strong>tuning is done on a small dense proxy, deployment is at large MoE scale.</strong> All sweeps that produced the calibrated hyperparameters were run at proxy backbone width $d_\star = 128$ on short runs (25k–100k steps). The large-scale runs then use Complete-muE to transfer to backbone width $d = 1024$ (8× wider, ~6.3B total MoE parameters with ~0.62B active) — a setting that would be enormously expensive to sweep directly.</p>
+    <p>At this scale, all four multimodal diffusion regimes — $256$P images, $512$P images, $240$P key frames, and $240$P $5$s videos — share <strong>one</strong> hyperparameter setting from the small-dense calibration ($\text{LR} = 2.26 \times 10^{-3}$, $\text{WD} = 0.01$). The LM training run uses one other ($\text{LR} = 5\times 10^{-4}$, $\text{WD} = 0.05$). Each MoE configuration is compared to its dense baseline at those same hyperparameters.</p>
+    <p>Every setting delivers consistent MoE-over-dense convergence speedup, with no per-setting retuning:</p>
+    <ul>
+      <li>$\sim\!2.5\times$ on $256$P images</li>
+      <li>$\sim\!4.5\times$ on $240$P $5$s videos</li>
+      <li>$\sim\!5.3\times$–$5.5\times$ on LLM training (100k iterations)</li>
+    </ul>
+    <p>This is the strongest form of empirical evidence the paper offers: <strong>cheap small-dense sweep → expensive large MoE training</strong>, across five very different landscapes, all delivering consistent gains.</p>
+  </div>
+
+  <figure>
+    <div class="img-pair">
+      <img src="figures/large_loss_240p_video.png" alt="Large-scale 240P 5s video training loss, dense vs. MoE.">
+      <img src="figures/large_speedup_240p_video.png" alt="Large-scale 240P 5s video convergence speedup, MoE vs. dense.">
+    </div>
+    <figcaption>Large-scale 240P 5s video diffusion training, dense vs. MoE. Left: training loss curves. Right: convergence speedup, measured as dense steps divided by MoE steps needed to reach the same loss during the stable-LR phase of WSD. The MoE variants reach roughly 4.5× speedup at large scale, using the same dense-tuned hyperparameter setting that was also used for the 256P, 512P, and 240P key-frame regimes.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="img-trio">
+      <img src="figures/large_llm_train_loss.png" alt="Large-scale LLM training loss, dense vs. MoE.">
+      <img src="figures/large_llm_val_loss.png" alt="Large-scale LLM validation loss, dense vs. MoE.">
+      <img src="figures/large_llm_speedup.png" alt="Large-scale LLM convergence speedup, MoE vs. dense.">
+    </div>
+    <figcaption>Large-scale LLM training (100k iterations), dense vs. MoE variants <code>128e8a4g1s</code> and <code>128e8a1s</code> at one shared hyperparameter setting (LR = $5\times10^{-4}$, WD = $0.05$). Left: smoothed training loss. Middle: validation loss on C4. Right: convergence speedup vs. dense baseline. The MoE variants reach 5.3–5.5× convergence speedup over dense.</figcaption>
+  </figure>
+
+  <h3>Downstream benchmarks confirm the loss gain</h3>
+  <p>The training-loss advantage translates into downstream-task quality. After the same 100k-step LM training, both MoE variants substantially improve the dense baseline's average across 13 LM benchmarks:</p>
+
+  <div class="table-scroll">
+    <table class="benchmark">
+      <caption>Large-scale dense vs. MoE benchmark evaluation (5-shot, percentages). <strong>Bold</strong> = best per column.</caption>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>SVAMP</th>
+          <th>MMLU</th>
+          <th>ARC-Easy</th>
+          <th>ARC-Chall.</th>
+          <th>COPA</th>
+          <th>PIQA</th>
+          <th>HellaSwag</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dense</td>
+          <td>7.0</td><td>25.4</td><td>64.6</td><td>33.6</td><td>70.0</td><td>72.6</td><td>56.5</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a4g1s</code></td>
+          <td>9.7</td><td>25.9</td><td>71.2</td><td><strong>43.6</strong></td><td>80.0</td><td>77.7</td><td>69.3</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a1s</code></td>
+          <td><strong>10.0</strong></td><td><strong>26.2</strong></td><td><strong>72.9</strong></td><td>43.4</td><td><strong>85.0</strong></td><td><strong>77.8</strong></td><td><strong>69.4</strong></td>
+        </tr>
+      </tbody>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>WinoGrande</th>
+          <th>LAMBADA</th>
+          <th>BoolQ</th>
+          <th>AGIEval-RC</th>
+          <th>AGIEval-LR</th>
+          <th>AGIEval-SAT</th>
+          <th>Average</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dense</td>
+          <td>59.0</td><td>50.5</td><td>62.6</td><td>20.9</td><td><strong>27.3</strong></td><td>26.2</td><td>44.3</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a4g1s</code></td>
+          <td>65.2</td><td>61.9</td><td>63.4</td><td>22.8</td><td>27.1</td><td>20.9</td><td>49.1</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a1s</code></td>
+          <td><strong>66.5</strong></td><td><strong>63.4</strong></td><td><strong>63.9</strong></td><td><strong>27.2</strong></td><td>24.3</td><td><strong>27.2</strong></td><td><strong>50.6</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Average score: <strong>44.3 → 49.1</strong> for the group-balanced variant and <strong>44.3 → 50.6</strong> for the non-grouped variant — a +4.8 to +6.3 point improvement on average, again at the dense-tuned hyperparameters.</p>
+
+  <h3>Bonus: large MoEs train at near-dense cost</h3>
+  <p>The other half of the practical win is that MoE training is <em>cheap</em>, especially along the capacity axis that gave the biggest loss gain above. On a single H100 80GB GPU, scaling from $8$ to $256$ total experts (at a fixed $8$ activated) raises step latency only from $87.8$ to $97.0$ ms/step — just $1.08\text{-}1.20\times$ the $81.0$ ms dense SwiGLU baseline. So you can grow MoE parameter count by an order of magnitude while keeping training cost essentially flat.</p>
+  <p>For context, reaching comparable parameter count by widening a dense model instead would push step latency from $81.0$ to $667.6$ ms ($8\times$ slower) before larger sizes simply run out of memory. The same comparison goes for granularity: fine-grained partitioning ($k = 2 \to 64$) raises latency from $84.1$ to $135.0$ ms/step — not free, but still far cheaper than dense width scaling.</p>
+  <p>Bottom line: <strong>large MoEs trained via capacity scaling are nearly free relative to dense, and Complete-muE makes them tunable for free, too</strong>. Both halves of the win compound.</p>
+</section>
+
+<!-- ============== TAKEAWAYS ============== -->
+<section id="takeaways">
+  <h2>Takeaways</h2>
+
+  <ul class="takeaway-list">
+    <li><strong>Small dense sweep, large MoE deployment.</strong> A single small-dense-proxy sweep is enough — no architecture-specific re-tuning at large scale.</li>
+    <li><strong>Two bridges, everything else by composition.</strong> Bridge I (active-width $\mu$P) + Bridge II (per-expert workload) cover the whole MoE design space without new primitives.</li>
+    <li><strong>The math is honest about its limits.</strong> The SDE cancellation is first-order, with a bounded second-order $\sigma_0$ drift. Small-scale sweeps and large-scale runs both confirm this drift is small enough in practice.</li>
+    <li><strong>Practical wins are real and measurable.</strong> $4.5\times$ on $240$P $5$s video and $5.3\text{-}5.5\times$ on LLM, all at the dense baseline's hyperparameters.</li>
+  </ul>
+
+  <h3>Why this matters</h3>
+  <p>For teams training large MoE models, the cost of "what learning rate should I use for this new MoE configuration?" has historically been a hyperparameter sweep at scale. Complete-muE replaces that sweep with one table lookup. The savings compound every time a team tries a new sparsity, granularity, or hybrid routing variant.</p>
+
+  <p>For researchers, the contribution is conceptual: capacity, granularity, and hybrid routing aren't new primitive hyperparameter-transfer rules — they're compositions of two well-understood bridge cases. That decomposition is the part most likely to outlive any specific architecture trend.</p>
+</section>
+
+<section id="links">
+  <h2>Read more</h2>
+  <ul>
+    <li>Paper: <em>Complete-muE: Optimal Hyperparameter Transfer and Scaling for MoE Models</em> — by
+      <a href="https://harveyp123.github.io/" target="_blank" rel="noopener">Hongwu Peng</a>,
+      <a href="https://research.adobe.com/person/ohi-dibua/" target="_blank" rel="noopener">Ohiremen Dibua</a>,
+      <a href="https://yjxiong.me/" target="_blank" rel="noopener">Yuanjun Xiong</a>,
+      <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a>,
+      <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a>,
+      <a href="https://research.adobe.com/person/yan-kang/" target="_blank" rel="noopener">Yan Kang</a>
+      (Adobe Research). Public link forthcoming.</li>
+    <li>Underpinnings: Tensor Programs / $\mu$P (Yang et al.); CompleteP / Complete$(d)$P (Cerebras, Apple) for the dense SDE backbone; the routing-and-MoE literature for the architecture side.</li>
+  </ul>
+  <p class="contact">Questions? Email <a href="mailto:hongwup@adobe.com">hongwup@adobe.com</a>.</p>
+</section>
+
+</main>
+
+<footer>
+  <p>Complete-muE blog post · Adobe Research.</p>
+</footer>
+
+</body>
+</html>

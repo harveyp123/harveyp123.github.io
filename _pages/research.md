@@ -17,6 +17,7 @@ My [DAC22](https://arxiv.org/pdf/2208.03646) paper is a Transformer-based model 
 - [Medusa: Simple Framework for Accelerating LLM Generation with Multiple Decoding Heads](https://sites.google.com/view/medusa-llm), 2023. \[[Code](https://github.com/FasterDecoding/Medusa)\].
 
 ### **Featured publications**
+- [Complete-muE: Optimal Hyperparameter Transfer and Scaling for MoE Models](/paper_blogs/complete_mue/) (**Preprint**), 2025. \[[Blog](/paper_blogs/complete_mue/)\].
 - [MaxK-GNN: Towards Theoretical Speed Limits for Accelerating Graph Neural Networks Training](https://arxiv.org/abs/2312.08656)  (**ASPLOS**), 2024. \[[Code](https://github.com/harveyp123/MaxK-GNN)\].
 - [Accel-GCN: High-Performance GPU Accelerator Design for Graph Convolution Networks](https://arxiv.org/abs/2308.11825)  (**ICCAD**), 2023. \[[Code](https://github.com/xiexi1990/iccad-accel-gnn)\].
 - [A length adaptive algorithm-hardware co-design of transformer on fpga through sparse attention and dynamic pipelining](https://arxiv.org/pdf/2208.03646) (**DAC**), 2022, **publicity paper**!.

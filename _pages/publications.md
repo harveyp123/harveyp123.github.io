@@ -5,6 +5,10 @@ permalink: /publications/
 author_profile: true
 ---
 
+### **Preprints**
+
+- P1. **Hongwu Peng**, Ohiremen Dibua, Yuanjun Xiong, Yifan Gong, Jianming Zhang, Yan Kang. [Complete-muE: Optimal Hyperparameter Transfer and Scaling for MoE Models](/paper_blogs/complete_mue/). *Adobe Research, 2025.* \[[Blog](/paper_blogs/complete_mue/)\].
+
 ### **CS Conference**
 
 - C19. **\[24'ASPLOS\]** **Hongwu Peng**, Xi Xie, Kaustubh Shivdikar, ... David Kaeli, Caiwen Ding. [MaxK-GNN: Towards Theoretical Speed Limits for Accelerating Graph Neural Networks Training](https://arxiv.org/abs/2312.08656). *ACM International Conference on Architectural Support for Programming Languages and Operating Systems.* \[[Code](https://github.com/harveyp123/MaxK-GNN)\].
