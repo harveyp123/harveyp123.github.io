@@ -498,24 +498,36 @@ code {
   color: var(--accent-deep);
 }
 
-/* BibTeX citation block */
+/* Citation code blocks (natural-language citation + BibTeX) */
+pre.citation-text,
 pre.bibtex {
   background: var(--bg-hood);
   border: 1px solid var(--rule);
   border-left: 3px solid var(--accent);
   border-radius: 6px;
   padding: 0.95rem 1.1rem;
-  margin: 0.8rem 0 1.2rem;
-  overflow-x: auto;
+  margin: 0.5rem 0 1.1rem;
   font-size: 0.82rem;
   line-height: 1.55;
   font-family: "SF Mono", "Menlo", Consolas, monospace;
   color: var(--fg);
-  white-space: pre;
   scrollbar-width: thin;
   scrollbar-color: var(--rule) transparent;
 }
 
+/* Natural-language citation: prose, so wrap softly */
+pre.citation-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* BibTeX: preserve indentation and let long lines scroll horizontally */
+pre.bibtex {
+  white-space: pre;
+  overflow-x: auto;
+}
+
+pre.citation-text code,
 pre.bibtex code {
   background: transparent;
   padding: 0;
