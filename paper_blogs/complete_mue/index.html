@@ -20,6 +20,9 @@
 <meta name="twitter:image" content="figures/teaser.png">
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231f5f5b'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='Helvetica' font-size='32' font-weight='700' fill='%23fff'%3E&%23956;E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,16..18,400;0,16..18,500;0,16..18,600;1,16..18,400;1,16..18,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
 window.MathJax = {
@@ -31,46 +34,249 @@ window.MathJax = {
 </head>
 <body>
 
-<header class="hero">
-  <div class="hero-inner">
-    <p class="eyebrow">Blog post · Adobe Research</p>
-    <h1>Complete-muE</h1>
-    <p class="subtitle">Tune one <em>small</em> dense baseline. Transfer to <em>any</em> large Mixture-of-Experts configuration.</p>
-    <p class="byline">
-      A practitioner-friendly walkthrough of the paper
-      <em>Complete-muE: Optimal Hyperparameter Transfer and Scaling for MoE Models</em>.
-    </p>
+<header class="post-heading">
+  <p class="eyebrow">Adobe Research · Blog Post</p>
+  <h1 class="post-title">Complete-muE</h1>
+  <p class="post-subtitle"><em>Optimal Hyperparameter Transfer and Scaling for MoE Models</em></p>
+  <div class="publish-metadata">
     <p class="authors">
-      <a href="https://harveyp123.github.io/" target="_blank" rel="noopener">Hongwu Peng</a> ·
-      <a href="https://research.adobe.com/person/ohi-dibua/" target="_blank" rel="noopener">Ohiremen Dibua</a> ·
-      <a href="https://yjxiong.me/" target="_blank" rel="noopener">Yuanjun Xiong</a> ·
-      <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a> ·
-      <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a> ·
+      <a href="https://harveyp123.github.io/" target="_blank" rel="noopener">Hongwu Peng</a>
+      <a href="https://research.adobe.com/person/ohi-dibua/" target="_blank" rel="noopener">Ohiremen Dibua</a>
+      <a href="https://yjxiong.me/" target="_blank" rel="noopener">Yuanjun Xiong</a>
+      <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a>
+      <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a>
       <a href="https://research.adobe.com/person/yan-kang/" target="_blank" rel="noopener">Yan Kang</a>
-      <br>
-      <span class="affil">Adobe Research</span>
     </p>
+    <p class="affil">Adobe Research</p>
   </div>
 </header>
 
-<figure class="teaser">
-  <img src="figures/teaser.png" alt="Complete-muE transfer paths: dense FFN → Dense MoE via active-width µP, Dense MoE → sparse MoE via expert-side SDE.">
+<figure class="post-cover">
+  <svg viewBox="0 0 2048 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Transferability teaser showing non-transferable and transferable paths">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#3d3d3d"/>
+      </marker>
+      <marker id="ah-rev" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M10,0 L0,5 L10,10 z" fill="#3d3d3d"/>
+      </marker>
+      <marker id="ah-small" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="#3d3d3d"/>
+      </marker>
+      <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="3.5" flood-color="#000000" flood-opacity="0.07"/>
+      </filter>
+    </defs>
+    <rect x="0" y="0" width="2048" height="512" fill="#ffffff"/>
+    <text x="369" y="37" text-anchor="middle" font-size="18" font-weight="800" fill="#5e5b55">NOT DIRECTLY TRANSFERRABLE</text>
+    <text x="1390" y="37" text-anchor="middle" font-size="18" font-weight="800" fill="#5e5b55">TRANSFERRABLE (Complete-μE)</text>
+    <g id="left-ffn">
+      <text x="24" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="139" y1="103" x2="139" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
+      <rect x="24" y="103" width="230" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
+      <rect x="42" y="122" width="194" height="95" rx="8" fill="#d6e6c4"/>
+      <text x="139" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">FFN</text>
+      <rect x="51" y="156" width="177" height="31" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1.1"/>
+      <text x="139" y="177" text-anchor="middle" font-size="19" font-weight="700" fill="#ffffff">FFN</text>
+      <rect x="48" y="256" width="182" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="139" y="279" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="139" y1="256" x2="139" y2="192" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+      <rect x="98" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
+      <text x="139" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="139" y1="358" x2="139" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+    </g>
+    <g id="left-sparse-moe">
+      <text x="406" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="560" y1="103" x2="560" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
+      <rect x="406" y="103" width="307" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
+      <rect x="437" y="122" width="245" height="117" rx="8" fill="#d6e6c4"/>
+      <text x="560" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">Sparse MoE</text>
+      <g>
+        <rect x="454" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="490" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="527" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="563" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="600" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="636" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+      </g>
+      <g fill="none">
+        <line x1="469" y1="172" x2="560" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
+        <line x1="542" y1="172" x2="560" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
+        <g stroke="#9b9a93" stroke-width="0.85" stroke-dasharray="3 3">
+          <line x1="505" y1="172" x2="560" y2="202"/>
+          <line x1="578" y1="172" x2="560" y2="202"/>
+          <line x1="615" y1="172" x2="560" y2="202"/>
+          <line x1="651" y1="172" x2="560" y2="202"/>
+        </g>
+      </g>
+      <rect x="503" y="200" width="114" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="560" y="223" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Router</text>
+      <rect x="452" y="263" width="216" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="560" y="286" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="560" y1="263" x2="560" y2="239" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+      <rect x="519" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
+      <text x="560" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="560" y1="358" x2="560" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+    </g>
+    <g id="not-transfer">
+      <line x1="254" y1="218" x2="308" y2="218" stroke="#3d3d3d" stroke-width="4.2" stroke-dasharray="12 8" stroke-linecap="round" marker-start="url(#ah-rev)"/>
+      <line x1="352" y1="218" x2="406" y2="218" stroke="#3d3d3d" stroke-width="4.2" stroke-dasharray="12 8" stroke-linecap="round" marker-end="url(#ah)"/>
+      <g transform="translate(330, 218)">
+        <circle cx="0" cy="0" r="20" fill="#d8362a"/>
+        <path d="M -8 -8 L 8 8 M 8 -8 L -8 8" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
+      </g>
+      <text x="330" y="258" text-anchor="middle" font-size="20" font-weight="800" fill="#d8362a">Not directly</text>
+      <text x="330" y="280" text-anchor="middle" font-size="20" font-weight="800" fill="#d8362a">transferrable</text>
+    </g>
+    <line x1="750" y1="64" x2="750" y2="415" stroke="#4d4d4d" stroke-width="4" stroke-linecap="round" stroke-dasharray="12 12"/>
+    <g id="right-ffn">
+      <text x="789" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="904" y1="103" x2="904" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
+      <rect x="789" y="103" width="230" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
+      <rect x="807" y="122" width="194" height="95" rx="8" fill="#d6e6c4"/>
+      <text x="904" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">FFN</text>
+      <rect x="816" y="156" width="177" height="31" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1.1"/>
+      <text x="904" y="177" text-anchor="middle" font-size="19" font-weight="700" fill="#ffffff">FFN</text>
+      <rect x="813" y="256" width="182" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="904" y="279" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="904" y1="256" x2="904" y2="192" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+      <rect x="863" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
+      <text x="904" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="904" y1="358" x2="904" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+    </g>
+    <g id="dense-moe">
+      <text x="1171" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="1325" y1="103" x2="1325" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
+      <rect x="1171" y="103" width="308" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
+      <rect x="1202" y="122" width="245" height="117" rx="8" fill="#d6e6c4"/>
+      <text x="1325" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">Dense MoE</text>
+      <g>
+        <rect x="1219" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1255" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1292" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1328" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1365" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1401" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+      </g>
+      <g stroke="#6c87ad" stroke-width="1.1" fill="none">
+        <line x1="1234" y1="172" x2="1325" y2="202"/>
+        <line x1="1270" y1="172" x2="1325" y2="202"/>
+        <line x1="1307" y1="172" x2="1325" y2="202"/>
+        <line x1="1343" y1="172" x2="1325" y2="202"/>
+        <line x1="1380" y1="172" x2="1325" y2="202"/>
+        <line x1="1416" y1="172" x2="1325" y2="202"/>
+      </g>
+      <rect x="1268" y="200" width="114" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="1325" y="223" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Router</text>
+      <rect x="1217" y="263" width="216" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="1325" y="286" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="1325" y1="263" x2="1325" y2="239" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+      <rect x="1284" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
+      <text x="1325" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="1325" y1="358" x2="1325" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+    </g>
+    <g id="right-sparse-moe">
+      <text x="1630" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="1784" y1="103" x2="1784" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
+      <rect x="1630" y="103" width="307" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
+      <rect x="1661" y="122" width="245" height="117" rx="8" fill="#d6e6c4"/>
+      <text x="1784" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">Sparse MoE</text>
+      <g>
+        <rect x="1678" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1714" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="1751" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1787" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="1824" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="1860" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+      </g>
+      <g fill="none">
+        <line x1="1693" y1="172" x2="1784" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
+        <line x1="1766" y1="172" x2="1784" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
+        <g stroke="#9b9a93" stroke-width="0.85" stroke-dasharray="3 3">
+          <line x1="1729" y1="172" x2="1784" y2="202"/>
+          <line x1="1802" y1="172" x2="1784" y2="202"/>
+          <line x1="1839" y1="172" x2="1784" y2="202"/>
+          <line x1="1875" y1="172" x2="1784" y2="202"/>
+        </g>
+      </g>
+      <rect x="1727" y="200" width="114" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="1784" y="223" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Router</text>
+      <rect x="1676" y="263" width="216" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
+      <text x="1784" y="286" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="1784" y1="263" x2="1784" y2="239" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+      <rect x="1743" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
+      <text x="1784" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="1784" y1="358" x2="1784" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+    </g>
+    <g id="transfer-left">
+      <line x1="1019" y1="218" x2="1171" y2="218" stroke="#3d3d3d" stroke-width="3.6" stroke-linecap="round" marker-start="url(#ah-rev)" marker-end="url(#ah)"/>
+      <g transform="translate(1067, 148)">
+        <rect x="0" y="0" width="56" height="32" rx="6" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.2"/>
+        <text x="28" y="22" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">μP</text>
+      </g>
+      <g transform="translate(1095, 218)">
+        <circle cx="0" cy="0" r="20" fill="#2c9b3c"/>
+        <path d="M -8 0 L -2 7 L 10 -8" stroke="#ffffff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="1095" y="257" text-anchor="middle" font-size="20" font-weight="800" fill="#2c9b3c">Transferrable</text>
+    </g>
+    <g id="transfer-right">
+      <line x1="1479" y1="218" x2="1630" y2="218" stroke="#3d3d3d" stroke-width="3.6" stroke-linecap="round" marker-start="url(#ah-rev)" marker-end="url(#ah)"/>
+      <g transform="translate(1526, 116)">
+        <rect x="0" y="0" width="56" height="32" rx="6" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.2"/>
+        <text x="28" y="22" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">μP</text>
+      </g>
+      <g transform="translate(1524, 150)">
+        <rect x="0" y="0" width="60" height="32" rx="6" fill="#f1e4c6" stroke="#b89758" stroke-width="1.2"/>
+        <text x="30" y="22" text-anchor="middle" font-size="20" font-weight="800" fill="#7d5a14">SDE</text>
+      </g>
+      <g transform="translate(1554, 218)">
+        <circle cx="0" cy="0" r="20" fill="#2c9b3c"/>
+        <path d="M -8 0 L -2 7 L 10 -8" stroke="#ffffff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="1554" y="257" text-anchor="middle" font-size="20" font-weight="800" fill="#2c9b3c">Transferrable</text>
+    </g>
+    <g id="legend">
+      <line x1="24" y1="438" x2="2024" y2="438" stroke="#e8e5dd" stroke-width="1"/>
+      <g transform="translate(36, 464)">
+        <rect x="0" y="0" width="280" height="34" rx="7" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.3"/>
+        <text x="140" y="23" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">Tensor program (μP)</text>
+        <text x="300" y="15" font-size="19" fill="#131312">transfer across <tspan font-weight="700">dense model architecture</tspan></text>
+        <text x="300" y="36" font-size="19" fill="#5e5b55">when training duration and batch size are fixed.</text>
+      </g>
+      <g transform="translate(820, 464)">
+        <rect x="0" y="0" width="240" height="34" rx="7" fill="#f1e4c6" stroke="#b89758" stroke-width="1.3"/>
+        <text x="120" y="23" text-anchor="middle" font-size="20" font-weight="800" fill="#7d5a14">Training as SDE</text>
+        <text x="260" y="15" font-size="19" fill="#131312">transfer across <tspan font-weight="700">batch size and training duration</tspan></text>
+        <text x="260" y="36" font-size="19" fill="#5e5b55">when the model architecture is fixed.</text>
+      </g>
+    </g>
+  </svg>
   <figcaption>Complete-muE composes two bridges: dense FFN ↔ Dense MoE via active-width µP (Bridge I), and Dense MoE ↔ sparse MoE via expert-side SDE (Bridge II). Every other MoE setting — capacity, granularity, hybrids — is a composition of these two.</figcaption>
 </figure>
 
-<nav class="toc" aria-label="Table of contents">
-  <ol>
-    <li><a href="#tldr">TL;DR</a></li>
-    <li><a href="#problem">Why MoE tuning is so painful</a></li>
-    <li><a href="#insight">The core insight: active width + expert workload</a></li>
-    <li><a href="#bridges">Two bridges from dense to any MoE</a></li>
-    <li><a href="#recipe">The recipe in three steps</a></li>
-    <li><a href="#tuning-menu">Tuning menu at a glance</a></li>
-    <li><a href="#calibration">A small honest caveat about drift</a></li>
-    <li><a href="#results">Does it actually work?</a></li>
-    <li><a href="#takeaways">Takeaways</a></li>
-  </ol>
-</nav>
+<p class="post-subtitle-tagline">Tune one <em>small</em> dense baseline. Transfer to <em>any</em> large Mixture-of-Experts configuration.</p>
+
+<div class="layout">
+
+<aside class="layout-toc" aria-label="Table of contents">
+  <p class="sidebar-heading">Contents</p>
+  <nav class="toc">
+    <ol>
+      <li><a href="#tldr">TL;DR</a></li>
+      <li><a href="#problem">Why MoE tuning is so painful</a></li>
+      <li><a href="#insight">Active width + expert workload</a></li>
+      <li><a href="#bridges">Two bridges from dense to any MoE</a></li>
+      <li><a href="#recipe">The recipe in three steps</a></li>
+      <li><a href="#tuning-menu">Tuning menu at a glance</a></li>
+      <li><a href="#calibration">A small honest caveat about drift</a></li>
+      <li><a href="#results">Does it actually work?</a></li>
+      <li><a href="#takeaways">Takeaways</a></li>
+      <li><a href="#paper">The paper</a></li>
+      <li><a href="#references">References</a></li>
+    </ol>
+  </nav>
+</aside>
 
 <main>
 
@@ -120,8 +326,9 @@ window.MathJax = {
   <p>This double-change is exactly what existing transfer rules <em>cannot</em> handle:</p>
 
   <ul>
-    <li><strong>$\mu$P</strong> handles changes to a fixed parameterized model very well — it gives you zero-shot width transfer. But it has no slot for the per-expert workload.</li>
-    <li><strong>SDE-based batch/duration rules</strong> handle changes in tokens-per-step for a <em>fixed</em> architecture. They don't apply when the architecture itself changes.</li>
+    <li><strong>$\mu$P</strong><sup class="cite-mark">1</sup><aside class="sidenote"><span class="sn-num">1</span> Yang et al. (2022). <em>Tensor Programs V.</em> <a href="https://arxiv.org/abs/2203.03466" target="_blank" rel="noopener">arXiv:2203.03466</a></aside> handles changes to a fixed parameterized model very well — it gives you zero-shot width transfer. Subsequent work extends it to depth, practical training, and diffusion transformers<sup class="cite-mark">2,3,10</sup><aside class="sidenote"><span class="sn-num">2</span> Dey et al. (2025). <em>Don't be lazy: CompleteP.</em> <a href="https://arxiv.org/abs/2505.01618" target="_blank" rel="noopener">arXiv:2505.01618</a></aside><aside class="sidenote"><span class="sn-num">3</span> Mlodozeniec et al. (2025). <em>Completed Hyperparameter Transfer (Complete(d)P).</em> <a href="https://arxiv.org/abs/2512.22382" target="_blank" rel="noopener">arXiv:2512.22382</a></aside><aside class="sidenote"><span class="sn-num">10</span> Zheng et al. (2025). <em>Scaling Diffusion Transformers via $\mu$P.</em> <a href="https://arxiv.org/abs/2505.15270" target="_blank" rel="noopener">arXiv:2505.15270</a></aside>. But plain $\mu$P has no slot for the per-expert workload.</li>
+    <li><strong>SDE-based batch/duration rules</strong><sup class="cite-mark">4</sup><aside class="sidenote"><span class="sn-num">4</span> Malladi et al. (2022). <em>SDEs and scaling rules for adaptive gradient algorithms.</em> <a href="https://arxiv.org/abs/2205.10287" target="_blank" rel="noopener">arXiv:2205.10287</a></aside> handle changes in tokens-per-step for a <em>fixed</em> architecture. They don't apply when the architecture itself changes.</li>
+    <li>Recent <strong>MoE-specific transfer studies</strong><sup class="cite-mark">5,6</sup><aside class="sidenote"><span class="sn-num">5</span> Małaśnicki et al. (2025). <em>$\mu$-Parametrization for Mixture of Experts.</em> <a href="https://arxiv.org/abs/2506.16962" target="_blank" rel="noopener">arXiv:2506.16962</a></aside><aside class="sidenote"><span class="sn-num">6</span> Jiang et al. (2026). <em>Hyperparameter Transfer with MoE Layers.</em></aside> preserve learning-rate ranges under expert-count sweeps but stop short of one compositional rule for the full MoE design space.</li>
   </ul>
 
   <p>So when you go from dense FFN to MoE, or change the MoE capacity, neither tool alone tells you what learning rate to use. Practitioners end up doing what they always did: another hyperparameter sweep. That gets expensive fast.</p>
@@ -485,23 +692,89 @@ window.MathJax = {
   <p>For researchers, the contribution is conceptual: capacity, granularity, and hybrid routing aren't new primitive hyperparameter-transfer rules — they're compositions of two well-understood bridge cases. That decomposition is the part most likely to outlive any specific architecture trend.</p>
 </section>
 
-<section id="links">
-  <h2>Read more</h2>
-  <ul>
-    <li>Paper: <em>Complete-muE: Optimal Hyperparameter Transfer and Scaling for MoE Models</em> — by
-      <a href="https://harveyp123.github.io/" target="_blank" rel="noopener">Hongwu Peng</a>,
-      <a href="https://research.adobe.com/person/ohi-dibua/" target="_blank" rel="noopener">Ohiremen Dibua</a>,
-      <a href="https://yjxiong.me/" target="_blank" rel="noopener">Yuanjun Xiong</a>,
-      <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a>,
-      <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a>,
-      <a href="https://research.adobe.com/person/yan-kang/" target="_blank" rel="noopener">Yan Kang</a>
-      (Adobe Research). Public link forthcoming.</li>
-    <li>Underpinnings: Tensor Programs / $\mu$P (Yang et al.); CompleteP / Complete$(d)$P (Cerebras, Apple) for the dense SDE backbone; the routing-and-MoE literature for the architecture side.</li>
-  </ul>
+<section id="paper">
+  <h2>The paper</h2>
+  <p><em>Complete-muE: Optimal Hyperparameter Transfer and Scaling for MoE Models</em> —
+    <a href="https://harveyp123.github.io/" target="_blank" rel="noopener">Hongwu Peng</a>,
+    <a href="https://research.adobe.com/person/ohi-dibua/" target="_blank" rel="noopener">Ohiremen Dibua</a>,
+    <a href="https://yjxiong.me/" target="_blank" rel="noopener">Yuanjun Xiong</a>,
+    <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a>,
+    <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a>,
+    <a href="https://research.adobe.com/person/yan-kang/" target="_blank" rel="noopener">Yan Kang</a>
+    (Adobe Research). Public link forthcoming.</p>
   <p class="contact">Questions? Email <a href="mailto:hongwup@adobe.com">hongwup@adobe.com</a>.</p>
 </section>
 
+<section id="references">
+  <h2>References</h2>
+  <p class="references-intro">Foundational works Complete-muE builds on: $\mu$P-style transfer, SDE-based optimizer scaling, MoE-specific transfer, and the broader sparse-MoE literature. Citations marked in the body link to the corresponding margin note; the full list is here.</p>
+  <ol class="references">
+    <li>
+      Yang, G., Hu, E. J., Babuschkin, I., Sidor, S., Liu, X., Farhi, D., Ryder, N., Pachocki, J., Chen, W., &amp; Gao, J. (2022).
+      <em>Tensor Programs V: Tuning large neural networks via zero-shot hyperparameter transfer.</em>
+      NeurIPS. <a href="https://arxiv.org/abs/2203.03466" target="_blank" rel="noopener">arXiv:2203.03466</a>.
+    </li>
+    <li>
+      Dey, N. S., Zhang, B. C., Noci, L., Li, M., Bordelon, B., Bergsma, S., Pehlevan, C., Hanin, B., &amp; Hestness, J. (2025).
+      <em>Don't be lazy: CompleteP enables compute-efficient deep transformers.</em>
+      NeurIPS. <a href="https://arxiv.org/abs/2505.01618" target="_blank" rel="noopener">arXiv:2505.01618</a>.
+    </li>
+    <li>
+      Mlodozeniec, B., Ablin, P., Béthune, L., Busbridge, D., Klein, M., Ramapuram, J., &amp; Cuturi, M. (2025).
+      <em>Completed Hyperparameter Transfer across Modules, Width, Depth, Batch and Duration.</em>
+      <a href="https://arxiv.org/abs/2512.22382" target="_blank" rel="noopener">arXiv:2512.22382</a>.
+    </li>
+    <li>
+      Malladi, S., Lyu, K., Panigrahi, A., &amp; Arora, S. (2022).
+      <em>On the SDEs and scaling rules for adaptive gradient algorithms.</em>
+      NeurIPS. <a href="https://arxiv.org/abs/2205.10287" target="_blank" rel="noopener">arXiv:2205.10287</a>.
+    </li>
+    <li>
+      Małaśnicki, J., Ciebiera, K., Boruń, M., Pióro, M., Ludziejewski, J., Stefaniak, M., Krutul, M., Jaszczur, S., Cygan, M., Adamczewski, K., et al. (2025).
+      <em>Mu-Parametrization for Mixture of Experts.</em>
+      ES-FoMo III Workshop. <a href="https://arxiv.org/abs/2506.16962" target="_blank" rel="noopener">arXiv:2506.16962</a>.
+    </li>
+    <li>
+      Jiang, T., Bordelon, B., Pehlevan, C., &amp; Hanin, B. (2026).
+      <em>Hyperparameter Transfer with Mixture-of-Expert Layers.</em>
+      arXiv preprint.
+    </li>
+    <li>
+      Shazeer, N., Mirhoseini, A., Maziarz, K., Davis, A., Le, Q., Hinton, G., &amp; Dean, J. (2017).
+      <em>Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer.</em>
+      ICLR. <a href="https://arxiv.org/abs/1701.06538" target="_blank" rel="noopener">arXiv:1701.06538</a>.
+    </li>
+    <li>
+      Fedus, W., Zoph, B., &amp; Shazeer, N. (2022).
+      <em>Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity.</em>
+      JMLR. <a href="https://arxiv.org/abs/2101.03961" target="_blank" rel="noopener">arXiv:2101.03961</a>.
+    </li>
+    <li>
+      Dai, D., Deng, C., Zhao, C., Xu, R. X., Gao, H., Chen, D., Li, J., Zeng, W., Yu, X., Wu, Y., et al. (2024).
+      <em>DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models.</em>
+      ACL. <a href="https://arxiv.org/abs/2401.06066" target="_blank" rel="noopener">arXiv:2401.06066</a>.
+    </li>
+    <li>
+      Zheng, C., Lou, A., Liu, C., Wei, X., Liu, Z., &amp; Ermon, S. (2025).
+      <em>Scaling Diffusion Transformers Efficiently via $\mu$P.</em>
+      NeurIPS. <a href="https://arxiv.org/abs/2505.15270" target="_blank" rel="noopener">arXiv:2505.15270</a>.
+    </li>
+    <li>
+      DeepSeek-AI. (2024).
+      <em>DeepSeek-V3 Technical Report.</em>
+      <a href="https://arxiv.org/abs/2412.19437" target="_blank" rel="noopener">arXiv:2412.19437</a>.
+    </li>
+    <li>
+      Orvieto, A., De, S., Gulcehre, C., Pascanu, R., &amp; Smith, S. L. (2025).
+      <em>In Search of Adam's Secret Sauce.</em>
+      NeurIPS. <a href="https://arxiv.org/abs/2510.08198" target="_blank" rel="noopener">arXiv:2510.08198</a>.
+    </li>
+  </ol>
+</section>
+
 </main>
+
+</div><!-- /.layout -->
 
 <footer>
   <p>Complete-muE blog post · Adobe Research.</p>

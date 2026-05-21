@@ -1,8 +1,7 @@
 /* ============================================================
    Complete-muE blog post — stylesheet
-   Warm-cream base, deep-teal accent, complementary caramel/sand.
-   Designed to read as a sophisticated academic post, not a
-   corporate site. No external font dependencies.
+   Academic-magazine inspired: Newsreader serif body, Inter
+   sans headings/UI, warm-cream surfaces with deep-teal accent.
    ============================================================ */
 
 :root {
@@ -28,17 +27,25 @@
   --accent-warm-light: #d6a45a;
 
   /* Structure */
-  --rule: #d8d2c2;           /* warm taupe rule */
+  --rule: #d8d2c2;
   --rule-soft: #e6e0d0;
 
-  /* Hero-on-dark text shades */
-  --on-dark: #f3eee2;
-  --on-dark-muted: #c5d2cf;
-  --on-dark-faint: #93a6a3;
+  /* Typography */
+  --serif: "Newsreader", "Iowan Old Style BT", Georgia, "Times New Roman", serif;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* Layout */
-  --max: 860px;
-  --max-figure: 1040px;
+  --max: 720px;          /* main reading column width */
+  --max-figure: 1100px;
+  --max-layout: 1280px;  /* outer 2-col container */
+  --toc-w: 210px;        /* fits double-digit "10."/"11." markers */
+  --col-gap: 2.25rem;
+  --sticky-top: 1.25rem;
+
+  /* Sidenote area inside main column */
+  --sidenote-w: 240px;
+  --sidenote-area: 280px;  /* sidenote-w + gutter */
+  --sidenote-gutter: 32px;
 }
 
 * { box-sizing: border-box; }
@@ -47,17 +54,21 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--serif);
   color: var(--fg);
   background: var(--bg);
   line-height: 1.65;
-  font-size: 17px;
+  font-size: 18px;
+  font-weight: 400;
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a {
   color: var(--accent);
   text-decoration: none;
-  border-bottom: 1px solid rgba(31, 95, 91, 0.25);
+  border-bottom: 1px solid rgba(31, 95, 91, 0.28);
   transition: border-color 0.15s, color 0.15s;
 }
 
@@ -66,161 +77,366 @@ a:hover {
   border-bottom-color: var(--accent-deep);
 }
 
-/* ---------------- Hero ---------------- */
+/* ---------------- Post heading (centered, academic) ---------------- */
 
-.hero {
-  background: linear-gradient(135deg, #0c2d2b 0%, #1f5f5b 65%, #2c7a73 100%);
-  color: var(--on-dark);
-  padding: 4rem 1.25rem 3rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero::after {
-  /* subtle texture: a soft radial highlight in the top-right corner */
-  content: "";
-  position: absolute;
-  top: -20%;
-  right: -10%;
-  width: 60%;
-  height: 140%;
-  background: radial-gradient(circle, rgba(214, 164, 90, 0.12) 0%, rgba(214, 164, 90, 0) 60%);
-  pointer-events: none;
-}
-
-.hero-inner {
+.post-heading {
   max-width: var(--max);
-  margin: 0 auto;
-  position: relative;
-  z-index: 1;
+  margin: 4rem auto 1.5rem;
+  padding: 0 1.25rem;
+  text-align: center;
 }
 
-.hero .eyebrow {
+.post-heading .eyebrow {
   margin: 0;
-  font-size: 0.82rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--on-dark-muted);
+  font-family: var(--sans);
+  font-size: 0.8rem;
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent);
 }
 
-.hero h1 {
-  margin: 0.3rem 0 0.75rem;
-  font-size: 2.9rem;
-  font-weight: 700;
+.post-heading .post-title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(2.4rem, 6vw, 3.4rem);
   letter-spacing: -0.015em;
   line-height: 1.08;
-  color: #fff;
+  margin: 0.7rem 0 0.4rem;
+  color: var(--fg);
 }
 
-.hero .subtitle {
-  font-size: 1.32rem;
-  margin: 0 0 1.4rem;
+.post-heading .post-subtitle {
+  font-family: var(--serif);
   font-weight: 400;
-  color: var(--on-dark);
-  line-height: 1.45;
-}
-
-.hero .subtitle em {
-  font-style: italic;
-  color: var(--accent-warm-light);
-  font-weight: 500;
-}
-
-.hero .byline {
+  font-size: clamp(1.15rem, 2.4vw, 1.4rem);
+  color: var(--fg-muted);
   margin: 0 0 1.4rem;
-  font-size: 0.95rem;
-  color: var(--on-dark-muted);
+  line-height: 1.4;
 }
 
-.hero .authors {
+.post-heading .post-subtitle em {
+  font-style: italic;
+}
+
+.publish-metadata {
+  font-family: var(--sans);
+  color: var(--fg-muted);
   margin: 0;
-  font-size: 0.97rem;
-  color: var(--on-dark);
+}
+
+.publish-metadata .authors {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
   line-height: 1.7;
 }
 
-.hero .authors a {
-  color: var(--on-dark);
-  border-bottom: 1px dotted rgba(243, 238, 226, 0.35);
+.publish-metadata .authors a {
+  color: var(--fg);
+  border-bottom: 1px dotted var(--rule);
+  white-space: nowrap;
+  margin: 0 0.35rem;
+  font-weight: 500;
 }
 
-.hero .authors a:hover {
-  color: var(--accent-warm-light);
-  border-bottom-color: var(--accent-warm-light);
+.publish-metadata .authors a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
-.hero .authors .affil {
-  color: var(--on-dark-faint);
+.publish-metadata .affil {
+  margin: 0;
   font-size: 0.9rem;
   font-style: italic;
+  color: var(--fg-faint);
 }
 
-/* ---------------- Teaser figure (full-width, after hero) ---------------- */
+/* Tagline below the cover figure */
+.post-subtitle-tagline {
+  max-width: var(--max);
+  margin: 1.5rem auto 0;
+  padding: 0 1.25rem;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.18rem;
+  color: var(--accent-deep);
+  line-height: 1.5;
+}
 
-figure.teaser {
+.post-subtitle-tagline em {
+  font-style: italic;
+  color: var(--accent-warm);
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* ---------------- Cover figure (inline SVG) ---------------- */
+
+figure.post-cover {
   max-width: var(--max-figure);
   margin: 2rem auto 0;
   padding: 0 1.25rem;
 }
 
-figure.teaser img {
+figure.post-cover svg {
+  display: block;
   width: 100%;
   height: auto;
-  display: block;
+  background: #fff;
   border-radius: 8px;
   border: 1px solid var(--rule);
-  background: #fff;
   box-shadow: 0 1px 3px rgba(31, 29, 26, 0.04);
 }
 
-figure.teaser figcaption {
+figure.post-cover svg text {
+  font-family: var(--sans);
+}
+
+figure.post-cover .label-italic {
+  font-family: var(--serif);
+  font-style: italic;
+}
+
+figure.post-cover figcaption {
   max-width: var(--max);
-  margin: 0.7rem auto 0;
+  margin: 0.8rem auto 0;
   color: var(--fg-muted);
-  font-size: 0.93rem;
+  font-size: 0.92rem;
   text-align: center;
   line-height: 1.55;
+  font-family: var(--serif);
+  font-style: italic;
 }
 
-/* ---------------- Nav ---------------- */
+/* ---------------- 2-column layout: TOC | main (with reserved right margin for sidenotes) ---------------- */
 
-.toc {
-  max-width: var(--max);
+.layout {
+  max-width: var(--max-layout);
   margin: 1.5rem auto 0;
-  padding: 1rem 1.25rem;
-  background: var(--bg-soft);
-  border: 1px solid var(--rule);
-  border-radius: 8px;
+  padding: 0 1.25rem;
+  display: grid;
+  grid-template-columns: var(--toc-w) minmax(0, 1fr);
+  gap: var(--col-gap);
+  align-items: start;
 }
 
-.toc ol {
+.layout > main {
+  /* Reserve right padding for sidenotes that float into it */
+  padding: 0 var(--sidenote-area) 4rem 0;
+  min-width: 0;
+}
+
+/* Left sidebar — sticky TOC */
+
+.layout > aside.layout-toc {
+  position: sticky;
+  top: var(--sticky-top);
+  align-self: start;
+  max-height: calc(100vh - 2 * var(--sticky-top));
+  overflow-y: auto;
+  font-family: var(--sans);
+  padding-right: 0.4rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+
+.layout > aside.layout-toc::-webkit-scrollbar {
+  width: 8px;
+}
+
+.layout > aside.layout-toc::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border-radius: 4px;
+}
+
+.sidebar-heading {
+  margin: 0 0 0.7rem;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.layout-toc .toc {
+  background: transparent;
+  border: none;
+  padding: 0;
   margin: 0;
-  padding-left: 1.4rem;
-  columns: 2;
-  column-gap: 1.75rem;
 }
 
-.toc li {
-  margin: 0.18rem 0;
-  break-inside: avoid;
-  font-size: 0.95rem;
+.layout-toc .toc ol {
+  margin: 0;
+  padding-left: 1.9rem;     /* enough room for "10." "11." markers */
+  columns: 1;
+  list-style: decimal;
 }
 
-.toc li a {
+.layout-toc .toc li {
+  margin: 0.32rem 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  padding-left: 0.15rem;
+  break-inside: auto;
+}
+
+.layout-toc .toc li::marker {
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.layout-toc .toc li a {
   border-bottom-color: transparent;
+  color: var(--fg-muted);
 }
 
-.toc li a:hover {
+.layout-toc .toc li a:hover {
+  color: var(--accent);
   border-bottom-color: var(--accent);
 }
 
-/* ---------------- Main content ---------------- */
+/* ---------------- Sidenotes (Tufte-style margin notes) ---------------- */
 
-main {
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
+.sidenote {
+  float: right;
+  clear: right;
+  width: var(--sidenote-w);
+  /* Push into the reserved right padding of <main>. The negative margin
+     equals -(sidenote-area), so the sidenote starts in the gutter and
+     extends to the right edge of <main>. */
+  margin-right: calc(-1 * var(--sidenote-area));
+  margin-top: 0.15rem;
+  margin-bottom: 0.9rem;
+  margin-left: var(--sidenote-gutter);
+  padding: 0 0 0 0.85rem;
+  border-left: 2px solid var(--accent-soft);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+.sidenote em {
+  color: var(--fg);
+  font-style: italic;
+}
+
+.sidenote a {
+  border-bottom: 1px dotted rgba(31, 95, 91, 0.4);
+  white-space: nowrap;
+}
+
+.sn-num {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.35em;
+}
+
+/* Inline superscript citation marker [N] becomes a small sans-serif sup */
+sup.cite-mark {
+  font-family: var(--sans);
+  font-size: 0.7em;
+  font-weight: 700;
+  color: var(--accent);
+  vertical-align: super;
+  line-height: 0;
+  margin-left: 0.05em;
+  white-space: nowrap;
+}
+
+/* ---------------- Bottom References section ---------------- */
+
+#references .references-intro {
+  color: var(--fg-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+ol.references {
+  list-style: decimal;
+  padding-left: 1.6rem;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  font-family: var(--sans);
+  color: var(--fg-muted);
+}
+
+ol.references li {
+  margin-bottom: 0.65rem;
+  padding-left: 0.25rem;
+}
+
+ol.references li::marker {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+ol.references em {
+  color: var(--fg);
+  font-style: italic;
+}
+
+ol.references a {
+  border-bottom: 1px dotted rgba(31, 95, 91, 0.35);
+}
+
+/* Responsive: collapse to single column, sidenotes display inline */
+
+@media (max-width: 1180px) {
+  .layout {
+    display: block;
+    max-width: var(--max);
+    padding: 0 1.25rem;
+  }
+  .layout > main {
+    padding: 0 0 2rem;
+  }
+  .layout > aside.layout-toc {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+    margin: 1.5rem 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
+  .layout-toc .toc ol {
+    columns: 2;
+    column-gap: 1.75rem;
+    padding-left: 2rem;
+  }
+  .layout-toc .toc li {
+    break-inside: avoid;
+  }
+  /* Sidenotes drop inline as styled callout boxes */
+  .sidenote {
+    float: none;
+    clear: none;
+    width: auto;
+    margin: 0.7rem 0;
+    padding: 0.55rem 0.9rem;
+    background: var(--bg-soft-2);
+    border-left: 3px solid var(--accent-soft);
+    border-radius: 0 4px 4px 0;
+    font-size: 0.86rem;
+    display: block;
+  }
+}
+
+@media (max-width: 600px) {
+  .layout-toc .toc ol {
+    columns: 1;
+  }
 }
 
 section {
@@ -233,25 +449,27 @@ section:first-of-type {
 }
 
 h2 {
-  font-size: 1.7rem;
+  font-family: var(--sans);
+  font-size: 1.55rem;
   font-weight: 600;
   margin: 0 0 1rem;
   border-bottom: 1px solid var(--rule);
   padding-bottom: 0.5rem;
-  letter-spacing: -0.008em;
+  letter-spacing: -0.01em;
   color: var(--fg);
 }
 
 h3 {
-  font-size: 1.17rem;
+  font-family: var(--sans);
+  font-size: 1.12rem;
   font-weight: 600;
-  margin: 1.85rem 0 0.65rem;
+  margin: 1.9rem 0 0.65rem;
   color: var(--fg);
-  letter-spacing: -0.003em;
+  letter-spacing: -0.005em;
 }
 
 p {
-  margin: 0.85rem 0;
+  margin: 0.9rem 0;
 }
 
 strong {
@@ -268,7 +486,7 @@ ul, ol {
 }
 
 ul li, ol li {
-  margin: 0.35rem 0;
+  margin: 0.4rem 0;
 }
 
 code {
@@ -297,7 +515,7 @@ code {
 .callout.headline {
   background: var(--bg-callout-headline);
   border-left-color: var(--accent-warm);
-  font-size: 1.05rem;
+  font-size: 1.04rem;
 }
 
 .under-hood {
@@ -306,14 +524,15 @@ code {
   border-radius: 6px;
   padding: 0.9rem 1.1rem;
   margin: 1rem 0;
-  font-size: 0.97rem;
+  font-size: 0.96rem;
 }
 
 .under-hood .hood-label {
   margin: 0 0 0.4rem;
-  font-size: 0.76rem;
+  font-family: var(--sans);
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent-deep);
 }
@@ -323,8 +542,9 @@ code {
   border-left: 3px solid var(--accent-warm);
   padding: 0.8rem 1rem;
   border-radius: 4px;
-  font-size: 0.95rem;
+  font-size: 0.94rem;
   margin-top: 1rem;
+  font-family: var(--sans);
 }
 
 /* ---------------- Layout helpers ---------------- */
@@ -355,12 +575,6 @@ code {
   }
   .toc ol {
     columns: 1;
-  }
-  .hero h1 {
-    font-size: 2.15rem;
-  }
-  .hero .subtitle {
-    font-size: 1.1rem;
   }
 }
 
@@ -435,7 +649,7 @@ main figure figcaption {
   }
 }
 
-/* ---------------- Tables (benchmark + tuning menu) ---------------- */
+/* ---------------- Tables ---------------- */
 
 .table-scroll {
   overflow-x: auto;
@@ -444,9 +658,10 @@ main figure figcaption {
 
 table {
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   width: 100%;
   background: #fff;
+  font-family: var(--sans);
 }
 
 table caption {
@@ -456,6 +671,7 @@ table caption {
   color: var(--fg-muted);
   font-size: 0.9rem;
   padding-bottom: 0.5rem;
+  font-family: var(--serif);
 }
 
 table th, table td {
@@ -490,15 +706,16 @@ table.benchmark tbody tr:nth-child(even) {
   background: var(--bg-soft-2);
   border-left: 4px solid var(--accent-soft);
   border-radius: 0 6px 6px 0;
-  padding: 0.9rem 1.15rem;
+  padding: 0.95rem 1.2rem;
   margin: 1.1rem 0;
 }
 
 .menu-section-label {
-  margin: 0 0 0.45rem;
-  font-size: 0.76rem;
+  margin: 0 0 0.5rem;
+  font-family: var(--sans);
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent-deep);
 }
@@ -535,7 +752,7 @@ table.tuning-menu td:nth-child(2) {
 .menu-takeaway {
   background: var(--bg-callout);
   border-left: 4px solid var(--accent);
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   border-radius: 0 4px 4px 0;
   margin-top: 1.2rem;
   font-style: italic;
@@ -560,7 +777,7 @@ table.tuning-menu td:nth-child(2) {
     white-space: normal;
   }
   table {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
   }
   table th, table td {
     padding: 0.35rem 0.45rem;
@@ -571,9 +788,10 @@ table.tuning-menu td:nth-child(2) {
 
 .badge {
   display: inline-block;
-  font-size: 0.7rem;
+  font-family: var(--sans);
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 0.18rem 0.5rem;
   border-radius: 3px;
@@ -596,7 +814,7 @@ table.tuning-menu td:nth-child(2) {
   background: #fff;
   border: 2px solid var(--accent);
   border-radius: 8px;
-  padding: 1.3rem 1.45rem;
+  padding: 1.35rem 1.5rem;
   margin: 1.5rem 0;
   box-shadow: 0 1px 3px rgba(31, 95, 91, 0.06);
 }
@@ -607,7 +825,7 @@ table.tuning-menu td:nth-child(2) {
 }
 
 .recipe li {
-  margin: 0.65rem 0;
+  margin: 0.7rem 0;
 }
 
 /* ---------------- Takeaways ---------------- */
@@ -620,12 +838,29 @@ table.tuning-menu td:nth-child(2) {
 .takeaway-list li {
   background: var(--bg-soft-2);
   border-left: 4px solid var(--accent-soft);
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   margin: 0.6rem 0;
   border-radius: 0 4px 4px 0;
 }
 
-/* ---------------- Contact line ---------------- */
+/* ---------------- Inline reference links [1], [2] etc ---------------- */
+
+section ul li a[href^="#ref-"],
+section p a[href^="#ref-"],
+section ol li a[href^="#ref-"] {
+  border-bottom: none;
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 0.78em;
+  font-weight: 600;
+  vertical-align: baseline;
+  padding: 0 0.05em;
+}
+
+section a[href^="#ref-"]:hover {
+  color: var(--accent-deep);
+  text-decoration: underline;
+}
 
 .contact {
   margin-top: 1rem;
@@ -651,7 +886,8 @@ footer {
   max-width: var(--max);
   margin: 2rem auto 3rem;
   padding: 1rem 1.25rem;
-  font-size: 0.9rem;
+  font-family: var(--sans);
+  font-size: 0.88rem;
   color: var(--fg-muted);
   border-top: 1px solid var(--rule);
   text-align: center;
