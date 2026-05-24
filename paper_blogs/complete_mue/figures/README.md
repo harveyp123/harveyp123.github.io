@@ -58,9 +58,12 @@ Paths are relative to the repo root (`mue_git/`).
 | `fixed_lr_df_granularity.png` | `figure/paper_loss_scaling/fixed_lr_diffusion_granularity_scaling.pdf` | 200 | "Fixed-LR scaling across MoE axes" — DF, granularity |
 | `fixed_lr_llm_layers.png` | `figure/paper_loss_scaling/fixed_lr_llm_layer_scaling.pdf` | 200 | "Fixed-LR scaling across MoE axes" — LM, layers |
 | `fixed_lr_df_layers.png` | `figure/paper_loss_scaling/fixed_lr_diffusion_layer_scaling.pdf` | 200 | "Fixed-LR scaling across MoE axes" — DF, layers |
-| `large_loss_240p_video.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_57_240_432_train_loss.pdf` | 200 | "Large-scale: ... five training regimes" — 240P 5s video training loss, dense vs. MoE |
-| `large_speedup_240p_video.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_57_240_432_convergence_speedup_vs_dense_step.pdf` | 200 | "Large-scale: ... five training regimes" — 240P 5s video convergence speedup |
-| `large_speedup_256p.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_1_256_256_convergence_speedup_vs_dense_step.pdf` | 200 | Reserved / future use (not currently in `index.html`) |
+| `large_loss_256p.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_1_256_256_train_loss.pdf` | 200 | "Large-scale evidence" — 256P image training loss, dense vs. MoE |
+| `large_loss_512p.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_1_512_512_train_loss.pdf` | 200 | "Large-scale evidence" — 512P image training loss, dense vs. MoE |
+| `large_loss_240p_keyframe.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_4_240_432_train_loss.pdf` | 200 | "Large-scale evidence" — 240P key-frame training loss, dense vs. MoE |
+| `large_loss_240p_video.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_57_240_432_train_loss.pdf` | 200 | "Large-scale evidence" — 240P 5s video training loss, dense vs. MoE |
+| `large_speedup_256p.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_1_256_256_convergence_speedup_vs_dense_step.pdf` | 200 | "Large-scale evidence" — 256P image convergence speedup |
+| `large_speedup_240p_video.png` | `figure/diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_57_240_432_convergence_speedup_vs_dense_step.pdf` | 200 | "Large-scale evidence" — 240P 5s video convergence speedup |
 | `large_llm_train_loss.png` | `figure/llms/large_run/gen7_text_100b_dense_vs_moe_smoothed_train_loss.pdf` | 200 | "Large-scale" LLM trio — smoothed training loss |
 | `large_llm_val_loss.png` | `figure/llms/large_run/gen7_text_100b_dense_vs_moe_val_loss.pdf` | 200 | "Large-scale" LLM trio — validation loss on C4 |
 | `large_llm_speedup.png` | `figure/llms/large_run/gen7_text_100b_dense_vs_moe_convergence_speedup_vs_dense_step.pdf` | 200 | "Large-scale" LLM trio — convergence speedup vs. dense |

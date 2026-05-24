@@ -117,14 +117,21 @@ FIGS = [
     ("paper_loss_scaling/fixed_lr_diffusion_layer_scaling.pdf",
      "fixed_lr_df_layers.png",           200),
 
-    # ---------- Large-scale 240P 5s video diffusion ----------
+    # ---------- Large-scale multi-modal diffusion (4 losses + 2 speedups,
+    #            matching the paper's fig:large-scale-complete-mue diffusion
+    #            rows: 256P / 512P / 240P-keyframe / 240P-5s-video) ----------
+    ("diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_1_256_256_train_loss.pdf",
+     "large_loss_256p.png",                 200),
+    ("diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_1_512_512_train_loss.pdf",
+     "large_loss_512p.png",                 200),
+    ("diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_4_240_432_train_loss.pdf",
+     "large_loss_240p_keyframe.png",        200),
     ("diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_57_240_432_train_loss.pdf",
-     "large_loss_240p_video.png",        200),
-    ("diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_57_240_432_convergence_speedup_vs_dense_step.pdf",
-     "large_speedup_240p_video.png",     200),
-    # Reserved / future: 256P image convergence speedup (not currently in index.html)
+     "large_loss_240p_video.png",           200),
     ("diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_1_256_256_convergence_speedup_vs_dense_step.pdf",
-     "large_speedup_256p.png",           200),
+     "large_speedup_256p.png",              200),
+    ("diffusions/large_run/gr6_conv_mini_512p_dense_vs_moe_multiresolution_57_240_432_convergence_speedup_vs_dense_step.pdf",
+     "large_speedup_240p_video.png",        200),
 
     # ---------- Large-scale LLM trio ----------
     ("llms/large_run/gen7_text_100b_dense_vs_moe_smoothed_train_loss.pdf",

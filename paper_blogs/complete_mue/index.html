@@ -686,11 +686,15 @@ window.MathJax = {
   </div>
 
   <figure>
-    <div class="img-pair">
-      <img src="figures/large_loss_240p_video.png" alt="Large-scale 240P 5s video training loss, dense vs. MoE.">
+    <div class="img-grid-3x2">
+      <img src="figures/large_loss_256p.png" alt="Large-scale 256P image diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_512p.png" alt="Large-scale 512P image diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_240p_keyframe.png" alt="Large-scale 240P key-frame diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_240p_video.png" alt="Large-scale 240P 5s video diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_speedup_256p.png" alt="Large-scale 256P image convergence speedup, MoE vs. dense.">
       <img src="figures/large_speedup_240p_video.png" alt="Large-scale 240P 5s video convergence speedup, MoE vs. dense.">
     </div>
-    <figcaption>Large-scale 240P 5s video diffusion training, dense vs. MoE. Left: training loss curves. Right: convergence speedup, measured as dense steps divided by MoE steps needed to reach the same loss during the stable-LR phase of WSD. The MoE variants reach roughly 4.5× speedup at large scale, using the same dense-tuned hyperparameter setting that was also used for the 256P, 512P, and 240P key-frame regimes.</figcaption>
+    <figcaption>Large-scale multimodal diffusion training, dense vs. MoE, at <em>one</em> shared hyperparameter setting (LR = $2.26\!\times\!10^{-3}$, WD = $0.01$, base init std = $0.02$) — the exact configuration the <a href="#example">worked example</a> produces. <strong>Top row — training loss across resolutions and modalities:</strong> $256$P images, $512$P images, $240$P key frames, $240$P $5$s videos. <strong>Bottom row — convergence speedup</strong> (dense steps / MoE steps to reach the same loss during the stable-LR phase of WSD) for the easiest and hardest regimes: $256$P images and $240$P $5$s videos. MoE keeps lower training loss in <em>every</em> resolution and modality, with $\sim\!2.5\times$ speedup at $256$P scaling up to $\sim\!4.5\times$ on $240$P $5$s video. The recipe transfers across genuinely different generation tasks — still image, key frame, video — not just one.</figcaption>
   </figure>
 
   <figure>
