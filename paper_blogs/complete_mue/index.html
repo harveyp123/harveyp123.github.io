@@ -11,13 +11,11 @@
 <meta property="og:type" content="article">
 <meta property="og:title" content="Complete-muE — Small Dense Sweep, Large MoE Deployment">
 <meta property="og:description" content="A compositional hyperparameter transfer rule for Mixture-of-Experts transformers. One small dense calibration delivers consistent gains at large MoE scale across activated experts, capacity, granularity, hybrids, and modalities — with up to 4.5× video and 5.3–5.5× LLM convergence speedup.">
-<meta property="og:image" content="figures/teaser.png">
 
 <!-- Twitter card -->
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Complete-muE — Small Dense Sweep, Large MoE Deployment">
 <meta name="twitter:description" content="Small dense calibration. Any large MoE architecture. Up to 4.5× video and 5.3–5.5× LLM convergence speedup.">
-<meta name="twitter:image" content="figures/teaser.png">
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231f5f5b'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='Helvetica' font-size='32' font-weight='700' fill='%23fff'%3E&%23956;E%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,7 +50,7 @@ window.MathJax = {
 </header>
 
 <figure class="post-cover">
-  <svg viewBox="0 0 2048 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Transferability teaser showing non-transferable and transferable paths">
+  <svg viewBox="0 0 1900 1080" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Complete-muE transferability triangle: dense FFN ↔ Dense MoE via μP, Dense MoE ↔ sparse MoE via μP plus SDE, dense FFN ↔ sparse MoE not directly transferrable">
     <defs>
       <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
         <path d="M0,0 L10,5 L0,10 z" fill="#3d3d3d"/>
@@ -67,188 +65,181 @@ window.MathJax = {
         <feDropShadow dx="0" dy="2" stdDeviation="3.5" flood-color="#000000" flood-opacity="0.07"/>
       </filter>
     </defs>
-    <rect x="0" y="0" width="2048" height="512" fill="#ffffff"/>
-    <text x="369" y="37" text-anchor="middle" font-size="18" font-weight="800" fill="#5e5b55">NOT DIRECTLY TRANSFERRABLE</text>
-    <text x="1390" y="37" text-anchor="middle" font-size="18" font-weight="800" fill="#5e5b55">TRANSFERRABLE (Complete-μE)</text>
-    <g id="left-ffn">
-      <text x="24" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
-      <line x1="139" y1="103" x2="139" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
-      <rect x="24" y="103" width="230" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
-      <rect x="42" y="122" width="194" height="95" rx="8" fill="#d6e6c4"/>
-      <text x="139" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">FFN</text>
-      <rect x="51" y="156" width="177" height="31" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1.1"/>
-      <text x="139" y="177" text-anchor="middle" font-size="19" font-weight="700" fill="#ffffff">FFN</text>
-      <rect x="48" y="256" width="182" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="139" y="279" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
-      <line x1="139" y1="256" x2="139" y2="192" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-      <rect x="98" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
-      <text x="139" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
-      <line x1="139" y1="358" x2="139" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-    </g>
-    <g id="left-sparse-moe">
-      <text x="406" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
-      <line x1="560" y1="103" x2="560" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
-      <rect x="406" y="103" width="307" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
-      <rect x="437" y="122" width="245" height="117" rx="8" fill="#d6e6c4"/>
-      <text x="560" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">Sparse MoE</text>
-      <g>
-        <rect x="454" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="490" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
-        <rect x="527" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="563" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
-        <rect x="600" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
-        <rect x="636" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
-      </g>
-      <g fill="none">
-        <line x1="469" y1="172" x2="560" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
-        <line x1="542" y1="172" x2="560" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
-        <g stroke="#9b9a93" stroke-width="0.85" stroke-dasharray="3 3">
-          <line x1="505" y1="172" x2="560" y2="202"/>
-          <line x1="578" y1="172" x2="560" y2="202"/>
-          <line x1="615" y1="172" x2="560" y2="202"/>
-          <line x1="651" y1="172" x2="560" y2="202"/>
-        </g>
-      </g>
-      <rect x="503" y="200" width="114" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="560" y="223" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Router</text>
-      <rect x="452" y="263" width="216" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="560" y="286" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
-      <line x1="560" y1="263" x2="560" y2="239" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-      <rect x="519" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
-      <text x="560" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
-      <line x1="560" y1="358" x2="560" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-    </g>
-    <g id="not-transfer">
-      <line x1="254" y1="218" x2="308" y2="218" stroke="#3d3d3d" stroke-width="4.2" stroke-dasharray="12 8" stroke-linecap="round" marker-start="url(#ah-rev)"/>
-      <line x1="352" y1="218" x2="406" y2="218" stroke="#3d3d3d" stroke-width="4.2" stroke-dasharray="12 8" stroke-linecap="round" marker-end="url(#ah)"/>
-      <g transform="translate(330, 218)">
-        <circle cx="0" cy="0" r="20" fill="#d8362a"/>
-        <path d="M -8 -8 L 8 8 M 8 -8 L -8 8" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round"/>
-      </g>
-      <text x="330" y="258" text-anchor="middle" font-size="20" font-weight="800" fill="#d8362a">Not directly</text>
-      <text x="330" y="280" text-anchor="middle" font-size="20" font-weight="800" fill="#d8362a">transferrable</text>
-    </g>
-    <line x1="750" y1="64" x2="750" y2="415" stroke="#4d4d4d" stroke-width="4" stroke-linecap="round" stroke-dasharray="12 12"/>
-    <g id="right-ffn">
-      <text x="789" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
-      <line x1="904" y1="103" x2="904" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
-      <rect x="789" y="103" width="230" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
-      <rect x="807" y="122" width="194" height="95" rx="8" fill="#d6e6c4"/>
-      <text x="904" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">FFN</text>
-      <rect x="816" y="156" width="177" height="31" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1.1"/>
-      <text x="904" y="177" text-anchor="middle" font-size="19" font-weight="700" fill="#ffffff">FFN</text>
-      <rect x="813" y="256" width="182" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="904" y="279" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
-      <line x1="904" y1="256" x2="904" y2="192" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-      <rect x="863" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
-      <text x="904" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
-      <line x1="904" y1="358" x2="904" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-    </g>
+
+    <!-- ========== Dense MoE (top center) ========== -->
     <g id="dense-moe">
-      <text x="1171" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
-      <line x1="1325" y1="103" x2="1325" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
-      <rect x="1171" y="103" width="308" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
-      <rect x="1202" y="122" width="245" height="117" rx="8" fill="#d6e6c4"/>
-      <text x="1325" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">Dense MoE</text>
+      <text x="504" y="33" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="658" y1="50" x2="658" y2="14" stroke="#3d3d3d" stroke-width="1.8" marker-end="url(#ah)"/>
+      <rect x="504" y="50" width="308" height="244" rx="14" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.4" filter="url(#soft)"/>
+      <rect x="534" y="70" width="248" height="130" rx="9" fill="#d6e6c4"/>
+      <text x="658" y="67" text-anchor="middle" font-size="22" font-weight="500" font-style="italic" fill="#2f4528">Dense MoE</text>
       <g>
-        <rect x="1219" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="1255" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="1292" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="1328" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="1365" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="1401" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="548" y="92" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="584" y="92" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="620" y="92" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="656" y="92" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="692" y="92" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="728" y="92" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
       </g>
-      <g stroke="#6c87ad" stroke-width="1.1" fill="none">
-        <line x1="1234" y1="172" x2="1325" y2="202"/>
-        <line x1="1270" y1="172" x2="1325" y2="202"/>
-        <line x1="1307" y1="172" x2="1325" y2="202"/>
-        <line x1="1343" y1="172" x2="1325" y2="202"/>
-        <line x1="1380" y1="172" x2="1325" y2="202"/>
-        <line x1="1416" y1="172" x2="1325" y2="202"/>
+      <g stroke="#6c87ad" stroke-width="1.2" fill="none">
+        <line x1="563" y1="121" x2="658" y2="155"/>
+        <line x1="599" y1="121" x2="658" y2="155"/>
+        <line x1="635" y1="121" x2="658" y2="155"/>
+        <line x1="671" y1="121" x2="658" y2="155"/>
+        <line x1="707" y1="121" x2="658" y2="155"/>
+        <line x1="743" y1="121" x2="658" y2="155"/>
       </g>
-      <rect x="1268" y="200" width="114" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="1325" y="223" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Router</text>
-      <rect x="1217" y="263" width="216" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="1325" y="286" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
-      <line x1="1325" y1="263" x2="1325" y2="239" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-      <rect x="1284" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
-      <text x="1325" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
-      <line x1="1325" y1="358" x2="1325" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+      <rect x="601" y="155" width="114" height="36" rx="6" fill="#ffffff" stroke="#bdbab2" stroke-width="1.2"/>
+      <text x="658" y="178" text-anchor="middle" font-size="21" font-weight="500" fill="#131312">Router</text>
+      <rect x="550" y="222" width="216" height="36" rx="6" fill="#ffffff" stroke="#bdbab2" stroke-width="1.2"/>
+      <text x="658" y="246" text-anchor="middle" font-size="21" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="658" y1="222" x2="658" y2="197" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah-small)"/>
+      <rect x="617" y="326" width="82" height="32" rx="6" fill="#1f1d1a"/>
+      <text x="658" y="348" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="658" y1="326" x2="658" y2="301" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah-small)"/>
     </g>
-    <g id="right-sparse-moe">
-      <text x="1630" y="85" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
-      <line x1="1784" y1="103" x2="1784" y2="68" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
-      <rect x="1630" y="103" width="307" height="230" rx="12" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.3" filter="url(#soft)"/>
-      <rect x="1661" y="122" width="245" height="117" rx="8" fill="#d6e6c4"/>
-      <text x="1784" y="119" text-anchor="middle" font-size="19" font-weight="600" fill="#2f4528" class="label-italic">Sparse MoE</text>
+
+    <!-- ========== Dense FFN (bottom left) ========== -->
+    <g id="dense-ffn">
+      <text x="125" y="493" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="240" y1="510" x2="240" y2="474" stroke="#3d3d3d" stroke-width="1.8" marker-end="url(#ah)"/>
+      <rect x="125" y="510" width="230" height="244" rx="14" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.4" filter="url(#soft)"/>
+      <rect x="143" y="530" width="194" height="106" rx="9" fill="#d6e6c4"/>
+      <text x="240" y="527" text-anchor="middle" font-size="22" font-weight="500" font-style="italic" fill="#2f4528">FFN</text>
+      <rect x="152" y="570" width="176" height="34" rx="6" fill="#6c87ad" stroke="#4f6986" stroke-width="1.2"/>
+      <text x="240" y="594" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff">FFN</text>
+      <rect x="149" y="682" width="182" height="36" rx="6" fill="#ffffff" stroke="#bdbab2" stroke-width="1.2"/>
+      <text x="240" y="706" text-anchor="middle" font-size="21" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="240" y1="682" x2="240" y2="640" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah-small)"/>
+      <rect x="199" y="786" width="82" height="32" rx="6" fill="#1f1d1a"/>
+      <text x="240" y="808" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="240" y1="786" x2="240" y2="761" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah-small)"/>
+    </g>
+
+    <!-- ========== Sparse MoE (bottom right) ========== -->
+    <g id="sparse-moe">
+      <text x="960" y="493" font-size="20" font-weight="500" fill="#131312">× N blocks</text>
+      <line x1="1114" y1="510" x2="1114" y2="474" stroke="#3d3d3d" stroke-width="1.8" marker-end="url(#ah)"/>
+      <rect x="960" y="510" width="308" height="244" rx="14" fill="#eef7e6" stroke="#bcd6b0" stroke-width="1.4" filter="url(#soft)"/>
+      <rect x="990" y="530" width="248" height="130" rx="9" fill="#d6e6c4"/>
+      <text x="1114" y="527" text-anchor="middle" font-size="22" font-weight="500" font-style="italic" fill="#2f4528">Sparse MoE</text>
       <g>
-        <rect x="1678" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="1714" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
-        <rect x="1751" y="143" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
-        <rect x="1787" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
-        <rect x="1824" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
-        <rect x="1860" y="143" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="1004" y="552" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1040" y="552" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="1076" y="552" width="30" height="29" rx="5" fill="#6c87ad" stroke="#4f6986" stroke-width="1"/>
+        <rect x="1112" y="552" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="1148" y="552" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
+        <rect x="1184" y="552" width="30" height="29" rx="5" fill="#e2e7ed" stroke="#7c8482" stroke-width="1"/>
       </g>
       <g fill="none">
-        <line x1="1693" y1="172" x2="1784" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
-        <line x1="1766" y1="172" x2="1784" y2="202" stroke="#6c87ad" stroke-width="1.3"/>
-        <g stroke="#9b9a93" stroke-width="0.85" stroke-dasharray="3 3">
-          <line x1="1729" y1="172" x2="1784" y2="202"/>
-          <line x1="1802" y1="172" x2="1784" y2="202"/>
-          <line x1="1839" y1="172" x2="1784" y2="202"/>
-          <line x1="1875" y1="172" x2="1784" y2="202"/>
+        <line x1="1019" y1="581" x2="1114" y2="615" stroke="#6c87ad" stroke-width="1.3"/>
+        <line x1="1091" y1="581" x2="1114" y2="615" stroke="#6c87ad" stroke-width="1.3"/>
+        <g stroke="#9b9a93" stroke-width="0.9" stroke-dasharray="3 3">
+          <line x1="1055" y1="581" x2="1114" y2="615"/>
+          <line x1="1127" y1="581" x2="1114" y2="615"/>
+          <line x1="1163" y1="581" x2="1114" y2="615"/>
+          <line x1="1199" y1="581" x2="1114" y2="615"/>
         </g>
       </g>
-      <rect x="1727" y="200" width="114" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="1784" y="223" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Router</text>
-      <rect x="1676" y="263" width="216" height="34" rx="5" fill="#ffffff" stroke="#bdbab2" stroke-width="1.1"/>
-      <text x="1784" y="286" text-anchor="middle" font-size="20" font-weight="500" fill="#131312">Self-attention</text>
-      <line x1="1784" y1="263" x2="1784" y2="239" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
-      <rect x="1743" y="358" width="82" height="31" rx="5" fill="#1f1d1a"/>
-      <text x="1784" y="380" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">Tokens</text>
-      <line x1="1784" y1="358" x2="1784" y2="334" stroke="#3d3d3d" stroke-width="1.4" marker-end="url(#ah-small)"/>
+      <rect x="1057" y="615" width="114" height="36" rx="6" fill="#ffffff" stroke="#bdbab2" stroke-width="1.2"/>
+      <text x="1114" y="639" text-anchor="middle" font-size="21" font-weight="500" fill="#131312">Router</text>
+      <rect x="1006" y="682" width="216" height="36" rx="6" fill="#ffffff" stroke="#bdbab2" stroke-width="1.2"/>
+      <text x="1114" y="706" text-anchor="middle" font-size="21" font-weight="500" fill="#131312">Self-attention</text>
+      <line x1="1114" y1="682" x2="1114" y2="657" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah-small)"/>
+      <rect x="1073" y="786" width="82" height="32" rx="6" fill="#1f1d1a"/>
+      <text x="1114" y="808" text-anchor="middle" font-size="20" font-weight="700" fill="#ffffff">Tokens</text>
+      <line x1="1114" y1="786" x2="1114" y2="761" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah-small)"/>
     </g>
-    <g id="transfer-left">
-      <line x1="1019" y1="218" x2="1171" y2="218" stroke="#3d3d3d" stroke-width="3.6" stroke-linecap="round" marker-start="url(#ah-rev)" marker-end="url(#ah)"/>
-      <g transform="translate(1067, 148)">
-        <rect x="0" y="0" width="56" height="32" rx="6" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.2"/>
-        <text x="28" y="22" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">μP</text>
+
+    <!-- ========== Arrow: FFN ↔ Dense MoE (up-right diagonal, transferrable via μP) ========== -->
+    <g id="arrow-ffn-dense">
+      <line x1="355" y1="510" x2="504" y2="294" stroke="#3d3d3d" stroke-width="3.2" stroke-linecap="round" marker-start="url(#ah-rev)" marker-end="url(#ah)"/>
+      <!-- μP tag near upper end (close to Dense MoE), inner side -->
+      <g transform="translate(485, 316)">
+        <rect x="0" y="0" width="58" height="34" rx="6" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.2"/>
+        <text x="29" y="23" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">μP</text>
       </g>
-      <g transform="translate(1095, 218)">
-        <circle cx="0" cy="0" r="20" fill="#2c9b3c"/>
-        <path d="M -8 0 L -2 7 L 10 -8" stroke="#ffffff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- "Transferrable" text in middle, rotated along arrow direction -->
+      <text x="454" y="419" text-anchor="middle" font-size="20" font-weight="700" font-style="italic" fill="#2c9b3c" transform="rotate(-52, 454, 419)">Transferrable</text>
+      <!-- Green checkmark near lower end (close to FFN), inner side -->
+      <g transform="translate(399, 508)">
+        <circle cx="0" cy="0" r="22" fill="#2c9b3c"/>
+        <path d="M -10 0 L -3 9 L 11 -10" stroke="#ffffff" stroke-width="3.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <text x="1095" y="257" text-anchor="middle" font-size="20" font-weight="800" fill="#2c9b3c">Transferrable</text>
     </g>
-    <g id="transfer-right">
-      <line x1="1479" y1="218" x2="1630" y2="218" stroke="#3d3d3d" stroke-width="3.6" stroke-linecap="round" marker-start="url(#ah-rev)" marker-end="url(#ah)"/>
-      <g transform="translate(1526, 116)">
-        <rect x="0" y="0" width="56" height="32" rx="6" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.2"/>
-        <text x="28" y="22" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">μP</text>
+
+    <!-- ========== Arrow: Dense MoE ↔ Sparse MoE (down-right diagonal, transferrable via μP + SDE) ========== -->
+    <g id="arrow-dense-sparse">
+      <line x1="812" y1="294" x2="960" y2="510" stroke="#3d3d3d" stroke-width="3.2" stroke-linecap="round" marker-start="url(#ah-rev)" marker-end="url(#ah)"/>
+      <!-- μP tag near upper end (close to Dense MoE), inner side -->
+      <g transform="translate(772, 316)">
+        <rect x="0" y="0" width="58" height="34" rx="6" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.2"/>
+        <text x="29" y="23" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">μP</text>
       </g>
-      <g transform="translate(1524, 150)">
-        <rect x="0" y="0" width="60" height="32" rx="6" fill="#f1e4c6" stroke="#b89758" stroke-width="1.2"/>
-        <text x="30" y="22" text-anchor="middle" font-size="20" font-weight="800" fill="#7d5a14">SDE</text>
+      <!-- SDE tag below μP -->
+      <g transform="translate(771, 360)">
+        <rect x="0" y="0" width="60" height="34" rx="6" fill="#f1e4c6" stroke="#b89758" stroke-width="1.2"/>
+        <text x="30" y="23" text-anchor="middle" font-size="20" font-weight="800" fill="#7d5a14">SDE</text>
       </g>
-      <g transform="translate(1554, 218)">
-        <circle cx="0" cy="0" r="20" fill="#2c9b3c"/>
-        <path d="M -8 0 L -2 7 L 10 -8" stroke="#ffffff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- "Transferrable" text in middle, rotated along arrow direction -->
+      <text x="861" y="419" text-anchor="middle" font-size="20" font-weight="700" font-style="italic" fill="#2c9b3c" transform="rotate(55, 861, 419)">Transferrable</text>
+      <!-- Green checkmark near lower end (close to Sparse MoE), inner side -->
+      <g transform="translate(916, 508)">
+        <circle cx="0" cy="0" r="22" fill="#2c9b3c"/>
+        <path d="M -10 0 L -3 9 L 11 -10" stroke="#ffffff" stroke-width="3.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <text x="1554" y="257" text-anchor="middle" font-size="20" font-weight="800" fill="#2c9b3c">Transferrable</text>
     </g>
-    <g id="legend">
-      <line x1="24" y1="438" x2="2024" y2="438" stroke="#e8e5dd" stroke-width="1"/>
-      <g transform="translate(36, 464)">
-        <rect x="0" y="0" width="280" height="34" rx="7" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.3"/>
-        <text x="140" y="23" text-anchor="middle" font-size="20" font-weight="800" fill="#4a2d7a">Tensor program (μP)</text>
-        <text x="300" y="15" font-size="19" fill="#131312">transfer across <tspan font-weight="700">dense model architecture</tspan></text>
-        <text x="300" y="36" font-size="19" fill="#5e5b55">when training duration and batch size are fixed.</text>
+
+    <!-- ========== Arrow: FFN ↔ Sparse MoE (horizontal dashed, not directly transferrable) ========== -->
+    <g id="arrow-not-direct">
+      <line x1="355" y1="660" x2="618" y2="660" stroke="#3d3d3d" stroke-width="4" stroke-linecap="round" stroke-dasharray="14 10" marker-start="url(#ah-rev)"/>
+      <line x1="702" y1="660" x2="960" y2="660" stroke="#3d3d3d" stroke-width="4" stroke-linecap="round" stroke-dasharray="14 10" marker-end="url(#ah)"/>
+      <!-- "Not directly transferrable" text on a single line above the arrow -->
+      <text x="660" y="630" text-anchor="middle" font-size="22" font-weight="700" fill="#d8362a">Not directly transferrable</text>
+      <!-- Red X in the middle of the dashed arrow -->
+      <g transform="translate(660, 660)">
+        <circle cx="0" cy="0" r="24" fill="#d8362a"/>
+        <path d="M -10 -10 L 10 10 M 10 -10 L -10 10" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
       </g>
-      <g transform="translate(820, 464)">
-        <rect x="0" y="0" width="240" height="34" rx="7" fill="#f1e4c6" stroke="#b89758" stroke-width="1.3"/>
-        <text x="120" y="23" text-anchor="middle" font-size="20" font-weight="800" fill="#7d5a14">Training as SDE</text>
-        <text x="260" y="15" font-size="19" fill="#131312">transfer across <tspan font-weight="700">batch size and training duration</tspan></text>
-        <text x="260" y="36" font-size="19" fill="#5e5b55">when the model architecture is fixed.</text>
+    </g>
+
+    <!-- ========== Right legend (what changes in each transfer) ========== -->
+    <g id="legend-right">
+      <g transform="translate(1340, 130)">
+        <rect x="0" y="0" width="64" height="36" rx="7" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.3"/>
+        <text x="32" y="25" text-anchor="middle" font-size="22" font-weight="800" fill="#4a2d7a">μP</text>
+        <line x1="68" y1="18" x2="112" y2="18" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
+        <text x="122" y="13" font-size="24" font-weight="700" fill="#131312">Model arch</text>
+        <text x="122" y="42" font-size="24" font-weight="700" fill="#131312">unchanged</text>
+        <text x="122" y="80" font-size="20" fill="#5e5b55">Only the activation</text>
+        <text x="122" y="106" font-size="20" fill="#5e5b55">scaling changes — μP.</text>
+      </g>
+      <g transform="translate(1340, 330)">
+        <rect x="0" y="0" width="64" height="36" rx="7" fill="#f1e4c6" stroke="#b89758" stroke-width="1.3"/>
+        <text x="32" y="25" text-anchor="middle" font-size="22" font-weight="800" fill="#7d5a14">SDE</text>
+        <line x1="68" y1="18" x2="112" y2="18" stroke="#3d3d3d" stroke-width="1.6" marker-end="url(#ah)"/>
+        <text x="122" y="13" font-size="24" font-weight="700" fill="#131312">Per-expert batch</text>
+        <text x="122" y="42" font-size="24" font-weight="700" fill="#131312">size changes</text>
+        <text x="122" y="80" font-size="20" fill="#5e5b55">Both batch size and total</text>
+        <text x="122" y="106" font-size="20" fill="#5e5b55">trained tokens move</text>
+        <text x="122" y="132" font-size="20" fill="#5e5b55">per expert — SDE.</text>
+      </g>
+    </g>
+
+    <!-- ========== Bottom legend (what each tool transfers) ========== -->
+    <g id="legend-bottom">
+      <line x1="60" y1="880" x2="1840" y2="880" stroke="#e8e5dd" stroke-width="1"/>
+      <g transform="translate(100, 910)">
+        <rect x="0" y="0" width="284" height="38" rx="8" fill="#ddd5ee" stroke="#7d6cb3" stroke-width="1.3"/>
+        <text x="142" y="26" text-anchor="middle" font-size="21" font-weight="800" fill="#4a2d7a">Tensor program (μP)</text>
+        <text x="302" y="14" font-size="20" fill="#131312">transfer across <tspan font-weight="700">dense model architecture</tspan></text>
+        <text x="302" y="40" font-size="20" fill="#5e5b55">when training duration and batch size are fixed.</text>
+      </g>
+      <g transform="translate(1020, 910)">
+        <rect x="0" y="0" width="244" height="38" rx="8" fill="#f1e4c6" stroke="#b89758" stroke-width="1.3"/>
+        <text x="122" y="26" text-anchor="middle" font-size="21" font-weight="800" fill="#7d5a14">Training as SDE</text>
+        <text x="262" y="14" font-size="20" fill="#131312">transfer across <tspan font-weight="700">batch size and training duration</tspan></text>
+        <text x="262" y="40" font-size="20" fill="#5e5b55">when the model architecture is fixed.</text>
       </g>
     </g>
   </svg>
@@ -265,12 +256,15 @@ window.MathJax = {
     <ol>
       <li><a href="#tldr">TL;DR</a></li>
       <li><a href="#problem">Why MoE tuning is so painful</a></li>
-      <li><a href="#insight">Active width + expert workload</a></li>
-      <li><a href="#bridges">Two bridges from dense to any MoE</a></li>
       <li><a href="#recipe">The recipe in three steps</a></li>
       <li><a href="#tuning-menu">Tuning menu at a glance</a></li>
-      <li><a href="#calibration">A small honest caveat about drift</a></li>
-      <li><a href="#results">Does it actually work?</a></li>
+      <li><a href="#example">Worked example: small → large MoE</a></li>
+      <li><a href="#small-scale">Small-scale evidence</a></li>
+      <li><a href="#large-scale">Large-scale evidence</a></li>
+      <li><a href="#cost">Bonus: MoEs train at near-dense cost</a></li>
+      <li><a href="#theory-intro">What's under the recipe</a></li>
+      <li><a href="#insight">Active width + expert workload</a></li>
+      <li><a href="#bridges">Two bridges from dense to any MoE</a></li>
       <li><a href="#takeaways">Takeaways</a></li>
       <li><a href="#paper">The paper</a></li>
       <li><a href="#references">References</a></li>
@@ -288,11 +282,11 @@ window.MathJax = {
     <p>The whole point is the asymmetry: <strong>small dense sweep, large MoE deployment</strong>. Our large-scale runs tune at proxy width $d_\star = 128$ and deploy at $d = 1024$ ($8\times$ wider). At that scale the recipe gives <strong>$\sim\!4.5\times$ convergence speedup</strong> for $240$P $5$s video diffusion and <strong>$\sim\!5.3\text{-}5.5\times$</strong> for LLM training versus a dense baseline at the <em>same</em> hyperparameters.</p>
   </div>
   <p class="audience-note">
-    👤 <strong>If you're new to MoE</strong>, the next two sections build the intuition.
+    👤 <strong>If you're new to MoE</strong>, start with <a href="#problem">why MoE tuning is so painful</a>, then read the rest top-to-bottom.
     <br>
-    🛠️ <strong>If you train models for a living</strong>, jump to <a href="#recipe">the recipe</a>.
+    🛠️ <strong>If you train models for a living</strong>, jump straight to <a href="#recipe">the recipe</a> and the <a href="#example">worked example</a>.
     <br>
-    🔬 <strong>If you want the math</strong>, the "under the hood" boxes throughout have the technical details.
+    🔬 <strong>If you want the math</strong>, see <a href="#theory-intro">how it works (theory)</a> and the "Under the hood" boxes inside it.
   </p>
 </section>
 
@@ -315,7 +309,7 @@ window.MathJax = {
   <div class="two-col">
     <div>
       <h3>1. The architecture changes</h3>
-      <p>Replacing a dense FFN with an MoE block, or making the experts smaller, alters the parameterized network. Signals propagate differently. Update sizes shift.</p>
+      <p>Replacing a dense FFN with an MoE block, or making the experts smaller, alters the parameterized network. Signals propagate differently. Per-step update sizes shift.</p>
     </div>
     <div>
       <h3>2. The data each expert sees changes</h3>
@@ -323,68 +317,15 @@ window.MathJax = {
     </div>
   </div>
 
-  <p>This double-change is exactly what existing transfer rules <em>cannot</em> handle:</p>
+  <p>This double-change — shifting update sizes<aside class="sidenote def"><em>Update size</em> ≈ the typical change in a parameter per training step, roughly $\eta \cdot \nabla\ell$. $\mu\text{P}$-style transfer is built on the requirement that each layer's per-step update size stays the same as the architecture is rescaled; if it shifts, the same learning rate produces a different effective trajectory.</aside> on one side, shifting per-expert workload on the other — is exactly what existing transfer rules<aside class="sidenote def">A <em>transfer rule</em> is a deterministic recipe for how the optimal hyperparameters scale when you change one architectural axis — e.g., $\mu\text{P}$ says scale the down-projection initialization by $\sqrt{H/d}$ when you widen the FFN. The goal of a transfer rule is to avoid re-sweeping at every new model size.</aside> <em>cannot</em> handle:</p>
 
   <ul>
-    <li><strong>$\mu$P</strong><sup class="cite-mark">1</sup><aside class="sidenote"><span class="sn-num">1</span> Yang et al. (2022). <em>Tensor Programs V.</em> <a href="https://arxiv.org/abs/2203.03466" target="_blank" rel="noopener">arXiv:2203.03466</a></aside> handles changes to a fixed parameterized model very well — it gives you zero-shot width transfer. Subsequent work extends it to depth, practical training, and diffusion transformers<sup class="cite-mark">2,3,10</sup><aside class="sidenote"><span class="sn-num">2</span> Dey et al. (2025). <em>Don't be lazy: CompleteP.</em> <a href="https://arxiv.org/abs/2505.01618" target="_blank" rel="noopener">arXiv:2505.01618</a></aside><aside class="sidenote"><span class="sn-num">3</span> Mlodozeniec et al. (2025). <em>Completed Hyperparameter Transfer (Complete(d)P).</em> <a href="https://arxiv.org/abs/2512.22382" target="_blank" rel="noopener">arXiv:2512.22382</a></aside><aside class="sidenote"><span class="sn-num">10</span> Zheng et al. (2025). <em>Scaling Diffusion Transformers via $\mu$P.</em> <a href="https://arxiv.org/abs/2505.15270" target="_blank" rel="noopener">arXiv:2505.15270</a></aside>. But plain $\mu$P has no slot for the per-expert workload.</li>
+    <li><strong>$\mu\text{P}$</strong><sup class="cite-mark">1</sup><aside class="sidenote"><span class="sn-num">1</span> Yang et al. (2022). <em>Tensor Programs V.</em> <a href="https://arxiv.org/abs/2203.03466" target="_blank" rel="noopener">arXiv:2203.03466</a></aside> handles changes to a fixed parameterized model very well — it gives you zero-shot width transfer. Subsequent work extends it to depth, practical training, and diffusion transformers<sup class="cite-mark">2,3,10</sup><aside class="sidenote"><span class="sn-num">2</span> Dey et al. (2025). <em>Don't be lazy: CompleteP.</em> <a href="https://arxiv.org/abs/2505.01618" target="_blank" rel="noopener">arXiv:2505.01618</a></aside><aside class="sidenote"><span class="sn-num">3</span> Mlodozeniec et al. (2025). <em>Completed Hyperparameter Transfer (Complete(d)P).</em> <a href="https://arxiv.org/abs/2512.22382" target="_blank" rel="noopener">arXiv:2512.22382</a></aside><aside class="sidenote"><span class="sn-num">10</span> Zheng et al. (2025). <em>Scaling Diffusion Transformers via $\mu\text{P}$.</em> <a href="https://arxiv.org/abs/2505.15270" target="_blank" rel="noopener">arXiv:2505.15270</a></aside>. But plain $\mu\text{P}$ has no slot for the per-expert workload.</li>
     <li><strong>SDE-based batch/duration rules</strong><sup class="cite-mark">4</sup><aside class="sidenote"><span class="sn-num">4</span> Malladi et al. (2022). <em>SDEs and scaling rules for adaptive gradient algorithms.</em> <a href="https://arxiv.org/abs/2205.10287" target="_blank" rel="noopener">arXiv:2205.10287</a></aside> handle changes in tokens-per-step for a <em>fixed</em> architecture. They don't apply when the architecture itself changes.</li>
     <li>Recent <strong>MoE-specific transfer studies</strong><sup class="cite-mark">5,6</sup><aside class="sidenote"><span class="sn-num">5</span> Małaśnicki et al. (2025). <em>$\mu$-Parametrization for Mixture of Experts.</em> <a href="https://arxiv.org/abs/2506.16962" target="_blank" rel="noopener">arXiv:2506.16962</a></aside><aside class="sidenote"><span class="sn-num">6</span> Jiang et al. (2026). <em>Hyperparameter Transfer with MoE Layers.</em></aside> preserve learning-rate ranges under expert-count sweeps but stop short of one compositional rule for the full MoE design space.</li>
   </ul>
 
-  <p>So when you go from dense FFN to MoE, or change the MoE capacity, neither tool alone tells you what learning rate to use. Practitioners end up doing what they always did: another hyperparameter sweep. That gets expensive fast.</p>
-</section>
-
-<!-- ============== INSIGHT ============== -->
-<section id="insight">
-  <h2>The core insight: active width + expert workload</h2>
-
-  <p>Complete-muE's main observation is that you can take the messy MoE design space and decompose it into two clean, well-understood steps. Each step changes <em>one</em> thing.</p>
-
-  <div class="callout">
-    <p><strong>Step 1 — Active width.</strong> A sparse MoE block that uses $a$ experts of width $h$ behaves, to first order, like a dense FFN with hidden width $H_a = a \cdot h$. This single quantity — the <em>active width</em> — governs everything that classical $\mu$P knows how to handle.</p>
-    <p><strong>Step 2 — Expert workload.</strong> Once active width is held fixed, the only remaining thing that changes when you flip between dense and sparse, or vary the activated-expert count, is how many tokens each expert sees per step. That's exactly the SDE setting — but applied to the <em>per-expert</em> training process rather than the whole model.</p>
-  </div>
-
-  <p>Decomposing the problem this way is the entire trick. Each step is a known problem with a known answer. The hard MoE-specific cases — total expert count, granularity, hybrids with shared experts and group-balanced routing — turn out to be <em>compositions</em> of these two steps. Nothing new needs to be invented for them.</p>
-</section>
-
-<!-- ============== BRIDGES ============== -->
-<section id="bridges">
-  <h2>Two bridges from dense to any MoE</h2>
-
-  <h3>Bridge I: Dense FFN ↔ Dense MoE</h3>
-  <p>The first bridge says: a dense FFN of width $H$ and a "Dense MoE" with $N$ experts of width $h = H/N$ (every expert active for every token) carry the same forward signal and the same per-step update size, as long as you do two small things:</p>
-  <ul>
-    <li>Use an output multiplier $A = d/H$ on the down-projection (where $d$ is the residual width). This is the standard $\mu$P factor for a width-$H$ FFN.</li>
-    <li>Use a <em>route scale</em> equal to the number of activated experts. Normalized routing averages expert outputs, which would otherwise shrink the update by $1/a$; the route scale undoes that.</li>
-  </ul>
-
-  <div class="under-hood">
-    <p class="hood-label">Under the hood</p>
-    <p>For a unit-expansion dense companion at backbone width $d$, the matching rule for the FFN/MoE output branch is</p>
-    <p>$$A(H) = \frac{d}{H}, \qquad \sigma_{\mathrm{down}}(d, H) = \left(\frac{H}{d}\right)^{1/2} \sigma_{\mathrm{down}}^{(1)}(d), \qquad \eta_{\mathrm{down}}(d, H) = \eta_{\mathrm{down}}^{(1)}(d).$$</p>
-    <p>This is essentially $\mu$P applied to the active width $H$, plus a normalized-route correction $r_a = a$.</p>
-  </div>
-
-  <h3>Bridge II: Dense MoE ↔ Sparse MoE</h3>
-  <p>The second bridge handles the move from a Dense MoE (all $N$ experts active) to a sparse MoE (only $a < N$ active). Once Bridge I is applied at the active width $H_a = ah$, the only remaining change is the per-expert data exposure.</p>
-  <p>Here's the elegant cancellation: when you switch from $a$ activated experts to $a'$ at fixed global batch size and steps, each expert's <em>batch</em> changes by the same factor as its <em>training duration</em>. Both go up or down together by $a'/a$. The standard SDE correction <em>cancels</em>:</p>
-
-  <div class="under-hood">
-    <p class="hood-label">Under the hood</p>
-    <p>$$\rho_B^{\mathrm{exp}} = \frac{B_{\mathrm{exp}}(a')}{B_{\mathrm{exp}}(a)} = \frac{a'}{a}, \qquad \rho_D^{\mathrm{exp}} = \frac{D_{\mathrm{exp}}(a')}{D_{\mathrm{exp}}(a)} = \frac{a'}{a}.$$</p>
-    <p>So the dense-style correction $\eta' \approx \eta\sqrt{\rho_B^{\mathrm{exp}}/\rho_D^{\mathrm{exp}}} = \eta$ — no first-order learning rate or weight decay multiplier is needed.</p>
-  </div>
-
-  <p>What does change is the expert-side noise-to-signal level $\sigma_0(a) = \eta \cdot \sigma_{\mathrm{exp}}(a)$. Making the MoE denser (larger $a$) lowers the per-step gradient noise, which is why denser MoEs can reach lower loss at the same hyperparameters. We'll return to this.</p>
-
-  <h3>Everything else is composition</h3>
-  <p>That's it for new primitives. Every other MoE setting — total capacity, granularity, hybrid blocks with shared experts and grouped routing — is built by composing Bridge I and Bridge II:</p>
-  <ul>
-    <li><strong>Total capacity ($N \to N'$):</strong> first widen the Dense-MoE companion (Bridge I), then re-sparsify back to $a$ active experts (Bridge II). The two factors cancel exactly.</li>
-    <li><strong>Granularity at fixed density ($s = a/N$):</strong> the active width is preserved by construction, so the same sparse-layer rule applies.</li>
-    <li><strong>Hybrid blocks (shared + grouped + routed):</strong> use one common active-width multiplier over the total active width $H_{\mathrm{tot}}$ and apply route scale only to routed branches.</li>
-  </ul>
+  <p>So when you go from dense FFN to MoE, or change the MoE capacity, neither tool alone tells you what learning rate to use. Practitioners end up doing what they always did — another full hyperparameter sweep at the new architecture — and that gets expensive fast.</p>
 </section>
 
 <!-- ============== RECIPE ============== -->
@@ -394,14 +335,17 @@ window.MathJax = {
   <div class="recipe">
     <ol>
       <li><strong>Tune once on a small dense FFN proxy.</strong> Pick a small backbone width (we use $d_\star = 128$), batch size, and a short training duration. Sweep learning rate, weight decay, and initialization on this small dense reference. This is the one and only hyperparameter sweep you do — it stays cheap regardless of how large the target MoE will be.</li>
-      <li><strong>Read the layer-level rule from Table 1 of the paper</strong> for your target MoE block. Compute the active width, look up the output multiplier $A$, the route scale $R$, and the down-projection initialization, then apply them.</li>
-      <li><strong>Compose the global AdamW factors from Table 2</strong> for any width / depth / batch / duration changes. For MoE-specific changes (different $a$, $N$, granularity, shared experts, group-balanced routing), no extra multiplier is needed — Table 1 already absorbed those.</li>
+      <li><strong>Read the layer-level rule from the <a href="#tuning-menu">tuning menu</a> below</strong> for your target MoE block. Compute the active width, look up the output multiplier $A$, the route scale $R$, and the down-projection initialization, then apply them.</li>
+      <li><strong>Compose the global AdamW factors from the <a href="#tuning-menu">tuning menu</a>'s batch/duration section</strong> for any width / depth / batch / duration changes. For MoE-specific changes (different $a$, $N$, granularity, shared experts, group-balanced routing), no extra multiplier is needed — the layer-level rule already absorbed those.</li>
     </ol>
   </div>
 
-  <p>Tables 1 and 2 fit on one page. You do not need to re-sweep for any MoE setting once the dense reference is tuned.</p>
+  <p>The tuning menu below fits on one screen. You do not need to re-sweep for any MoE setting once the dense reference is tuned.</p>
+</section>
 
-  <h3 id="tuning-menu">Tuning menu at a glance</h3>
+<!-- ============== TUNING MENU ============== -->
+<section id="tuning-menu">
+  <h2>Tuning menu at a glance</h2>
   <p>The actual rule is even simpler than it sounds. There is a <em>single</em> active-width $H_{\mathrm{act}}$ that drives every MoE-specific adjustment, plus one routing choice that keeps things clean:</p>
 
   <div class="menu-block">
@@ -417,7 +361,7 @@ window.MathJax = {
     <ul class="menu-tight keep">
       <li>Learning rate $\eta$ (the raw value you swept on the dense FFN)</li>
       <li>Weight decay $\lambda$</li>
-      <li>Backbone-width and depth $\mu$P factors (already standard)</li>
+      <li>Backbone-width and depth $\mu\text{P}$ factors (already standard)</li>
       <li>No MoE-specific LR/WD multiplier for $a$, $N$, or granularity — Table 1 absorbs those</li>
     </ul>
   </div>
@@ -436,7 +380,7 @@ window.MathJax = {
         <tbody>
           <tr>
             <td>Active width $H_{\mathrm{act}}$</td>
-            <td><code>$H$</code> (dense) <br> <code>$ah$</code> (sparse MoE) <br> <code>$H_{\mathrm{tot}}$</code> (hybrid)</td>
+            <td>$H$ (dense) <br> $ah$ (sparse MoE) <br> $H_{\mathrm{tot}}$ (hybrid)</td>
             <td>The single quantity that drives every rule below.</td>
           </tr>
           <tr>
@@ -456,12 +400,12 @@ window.MathJax = {
           </tr>
           <tr>
             <td>Up / gate projections</td>
-            <td>Standard $\mu$P factors</td>
+            <td>Standard $\mu\text{P}$ factors</td>
             <td>Controlled by backbone width $d$ — no MoE-specific change.</td>
           </tr>
           <tr>
             <td>Router readout</td>
-            <td>Standard $\mu$P factors</td>
+            <td>Standard $\mu\text{P}$ factors</td>
             <td>Treated like any $d$-controlled projection.</td>
           </tr>
         </tbody>
@@ -525,40 +469,148 @@ window.MathJax = {
   <p class="menu-takeaway">In short: pick a routing choice once, compute $H_{\mathrm{act}}$ for your block, derive three numbers ($A$, $R$, $\sigma_{\mathrm{down}}$), apply the CompleteP batch/duration multipliers if the schedule changed, and reuse <em>every</em> other hyperparameter from the dense baseline.</p>
 </section>
 
-<!-- ============== CALIBRATION ============== -->
-<section id="calibration">
-  <h2>A small honest caveat about drift</h2>
+<!-- ============== WORKED EXAMPLE ============== -->
+<section id="example">
+  <h2>Worked example: small dense → large MoE (<code>128e8a1s</code>)</h2>
 
-  <p>The first-order SDE correction in Bridge II cancels exactly, but there's a second-order effect we want to be upfront about: the per-step expert-side noise $\sigma_0(a)$ shifts when $a$ changes. The change is bounded:</p>
+  <p>This is the recipe applied end-to-end: take the small-dense LM and diffusion calibration values, plug them through the two tables, and arrive at the hyperparameters actually used in the large-scale runs. The summary table below shows every knob at both scales; the three steps after it explain where the "Large" column comes from.</p>
 
-  <p>$$\sigma_0(a') = \frac{\sigma_0(a)}{\sqrt{\rho_B^{\mathrm{exp}}}}.$$</p>
+  <h3>Setup — every hyperparameter at a glance</h3>
+  <div class="table-scroll">
+    <table class="setup-table">
+      <thead>
+        <tr><th></th><th>Small dense proxy</th><th>Large MoE (target)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Architecture</td><td>dense FFN</td><td>MoE <code>128e8a1s</code> &nbsp;(128 routed experts, 8 activated, 1 shared)</td></tr>
+        <tr><td>Backbone width $d$</td><td>$128$</td><td>$1024$ &nbsp;($\rho_d = 8$)</td></tr>
+        <tr><td>FFN-expansion equivalence</td><td>$1\times$</td><td>$4.5\times$ &nbsp;($H_\mathrm{act}/d = 9$)</td></tr>
+        <tr><td>Training iterations $T$</td><td>$25{,}000$</td><td>$100{,}000$ &nbsp;($\rho_T = 4$)</td></tr>
+        <tr><td>Batch size</td><td colspan="2" style="text-align:center;">unchanged across scales ($\rho_B = 1$)</td></tr>
 
-  <p>This means Bridge II is not a <em>strict</em> SDE invariance — it's a relatively stable transfer with some mild residual drift in the optimal hyperparameters. The same kind of bounded drift shows up in two other places in the paper:</p>
+        <tr class="sep"><td colspan="3">Global AdamW hyperparameters &nbsp;(the single LR/WD/init you set in the optimizer)</td></tr>
+        <tr><td>LM &mdash; base LR</td><td>$10^{-3}$</td><td>$5\!\times\!10^{-4}$</td></tr>
+        <tr><td>LM &mdash; weight decay</td><td>$0.10$</td><td>$0.05$</td></tr>
+        <tr><td>LM &mdash; init std</td><td>$0.01$</td><td>$0.01$</td></tr>
+        <tr><td>Diffusion &mdash; base LR</td><td>$4.52\!\times\!10^{-3}$</td><td>$2.26\!\times\!10^{-3}$</td></tr>
+        <tr><td>Diffusion &mdash; weight decay</td><td>$0.02$</td><td>$0.01$</td></tr>
+        <tr><td>Diffusion &mdash; init std</td><td>$0.02$</td><td>$0.02$</td></tr>
+
+        <tr class="sep"><td colspan="3">MoE layer-level overrides &nbsp;(applied at the large MoE only)</td></tr>
+        <tr><td>Active width $H_\mathrm{act}$</td><td>$d$ (dense)</td><td>$9d$ &nbsp;(shared $+$ 8 routed)</td></tr>
+        <tr><td>Output multiplier $A = d/H_\mathrm{act}$</td><td>$1$</td><td>$1/9$ &nbsp;(on FFN/MoE down-projection)</td></tr>
+        <tr><td>Route scale $R$</td><td>$1$</td><td>$8$ on routed sum, $1$ on shared branch</td></tr>
+        <tr><td>Down-proj init-std factor $\sqrt{H_\mathrm{act}/d}$</td><td>$\times 1$</td><td>$\times 3$ &nbsp;(applied on top of dense-baseline init std)</td></tr>
+
+        <tr class="sep"><td colspan="3"><span class="keep-case">μ</span>P per-layer scaling &nbsp;(every 2D linear projection inside the transformer block at the large MoE)</td></tr>
+        <tr><td>Per-layer LR factor &nbsp;($\rho_d^{-1}$)</td><td>$\times 1$</td><td>$\times 1/8$</td></tr>
+        <tr><td>Per-layer init-std factor &nbsp;($\rho_d^{-1/2}$)</td><td>$\times 1$</td><td>$\times 1/\sqrt{8}$</td></tr>
+        <tr><td>Final output-projection multiplier &nbsp;($1/m_d$, &nbsp;$m_d = \rho_d$)</td><td>$\times 1$</td><td>$\times 1/8$ &nbsp;(LM head / diffusion output projection)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Step 1 — global batch/duration scaling (<a href="#tuning-menu">Table 2</a>)</h3>
+  <p>The batch is unchanged; only the duration grows ($T_\star = 25\text{k} \to T = 100\text{k}$). This is the "fixed batch, change duration" row of the tuning menu, with $\rho_B = 1$ and $\rho_D = \rho_B \cdot \rho_T = 4$, so</p>
+  <p>$$\eta,\lambda \;\;\times\;\; \sqrt{\rho_B/\rho_D} \;=\; \sqrt{1/4} \;=\; 1/2.$$</p>
+  <p>That halves the base LR and WD between the two columns of the table above — LM: $10^{-3} \to 5\!\times\!10^{-4}$, $0.10 \to 0.05$; diffusion: $4.52\!\times\!10^{-3} \to 2.26\!\times\!10^{-3}$, $0.02 \to 0.01$. Init std is untouched by Step 1 (batch and duration don't enter the initialization rule).</p>
+
+  <h3>Step 2 — MoE layer-level rule (<a href="#tuning-menu">Table 1</a>)</h3>
+  <p>The <code>128e8a1s</code> block has 8 routed-active experts plus 1 shared expert, giving an FFN expansion equivalence of $4.5\times$ and an active width $H_\mathrm{act} = 9d$ when shared and routed contributions are combined. The Table 1 lookup for hybrid blocks then gives:</p>
   <ul>
-    <li><strong>Capacity scaling</strong> (varying $N$ at fixed $a, h$), because the composition that builds it uses Bridge II as a sub-step.</li>
-    <li><strong>Batch-size transfer at fixed training iterations</strong>, where the gradient noise $\sigma_0$ shifts even though the optimization horizon $H_{\mathrm{SDE}} = T\eta^2$ is preserved.</li>
+    <li><strong>Output multiplier</strong> $A = d/H_\mathrm{act} = 1/9$, applied to the MoE down-projection output.</li>
+    <li><strong>Route scale</strong> $R = 8$ on the normalized routed sum; the shared branch keeps $R = 1$.</li>
+    <li><strong>Down-projection init-std factor</strong> $\sqrt{H_\mathrm{act}/d} = \sqrt{9} = 3$, multiplied onto the dense-baseline init std for that one parameter.</li>
   </ul>
+  <p>No MoE-specific multiplier touches the LR or WD — those changes are fully absorbed by $A$, $R$, and the init-std factor.</p>
 
-  <p>The empirical question is whether this drift is small enough to ignore in practice. The answer the paper carefully argues — and then demonstrates twice over — is <strong>yes</strong>.</p>
+  <h3>Step 3 — standard $\mu\text{P}$ per-layer scaling ($d$: $128 \to 1024$)</h3>
+  <p>Standard $\mu\text{P}$ scales <em>every 2D linear projection</em> inside the transformer block — the FFN/MoE up, gate, and down projections, the router readout, the attention $Q$, $K$, $V$, and $O$ projections, plus anything else that is a learned $d_\text{in} \!\times\! d_\text{out}$ matrix. All of them inherit the same two width factors:</p>
+  <p>$$\eta_{\text{per-layer}} \;\propto\; \rho_d^{-1} = 1/8, \qquad \sigma_{\text{per-layer}} \;\propto\; \rho_d^{-1/2} = 1/\sqrt{8}.$$</p>
+  <p>In words: every such linear layer at $d = 1024$ uses $1/8$ the LR and $1/\sqrt{8}$ the init std of the same layer at $d = 128$, before any MoE-specific factors are applied on top.</p>
+  <p>$\mu\text{P}$ also specifies a separate <strong>output multiplier</strong> for the final embedding-to-logits (or embedding-to-output) projection — the LM head for language modelling, the noise/velocity prediction head for diffusion. That multiplier is $1/m_d$, where $m_d = \rho_d$ is the width-expansion ratio. With $\rho_d = 8$ here, the final output projection gets an extra $\times 1/8$ scaling factor, independently of the per-layer LR/init rules above.</p>
+
+  <h3>Effective per-parameter values at the large MoE</h3>
+  <p>Composing Step 2 (MoE layer rule) with Step 3 ($\mu\text{P}$ width factor) gives the actual per-parameter LR and init std for each parameter group:</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Parameter group</th>
+          <th>LR factor</th>
+          <th>Init-std factor</th>
+          <th>LM init std</th>
+          <th>DF init std</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>FFN/MoE down-projection</td>
+          <td>$\times 1/8$</td>
+          <td>$\times 3/\sqrt{8} \approx 1.06$</td>
+          <td>$\approx 0.0106$</td>
+          <td>$\approx 0.0212$</td>
+        </tr>
+        <tr>
+          <td>FFN/MoE up &amp; gate projections</td>
+          <td>$\times 1/8$</td>
+          <td>$\times 1/\sqrt{8} \approx 0.354$</td>
+          <td>$\approx 0.0035$</td>
+          <td>$\approx 0.0071$</td>
+        </tr>
+        <tr>
+          <td>Router readout</td>
+          <td>$\times 1/8$</td>
+          <td>$\times 1/\sqrt{8}$</td>
+          <td>$\approx 0.0035$</td>
+          <td>$\approx 0.0071$</td>
+        </tr>
+        <tr>
+          <td>Attention QKVO &amp; other linear layers</td>
+          <td>$\times 1/8$</td>
+          <td>$\times 1/\sqrt{8}$</td>
+          <td>$\approx 0.0035$</td>
+          <td>$\approx 0.0071$</td>
+        </tr>
+        <tr>
+          <td>Final output projection (LM head / DF head)</td>
+          <td>$\times 1/8$</td>
+          <td>$\times 1/\sqrt{8}$ &nbsp;<em>and</em> output multiplier $\times 1/m_d = \times 1/8$</td>
+          <td>$\approx 0.0035$</td>
+          <td>$\approx 0.0071$</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The final output projection gets <em>both</em> the per-layer $\mu\text{P}$ scaling (Step 3, same as every other 2D linear) <em>and</em> the additional output multiplier $\times 1/m_d$ on its output activations. On top of that, the MoE-specific multipliers from Step 2 apply only to the routed-output branch inside the MoE block: output multiplier $A = 1/9$ on the down-projection output, and route scale $R = 8$ on the normalized routed sum (the shared expert keeps $R = 1$).</p>
+
+  <p class="audience-note">There is no per-architecture sweep between the small calibration and the large run. Every number in the "Large" column of the setup table is mechanical — it follows from the small-proxy values by applying the two tables in sequence.</p>
 </section>
 
-<!-- ============== RESULTS ============== -->
-<section id="results">
-  <h2>Does it actually work?</h2>
+<!-- ============== SMALL-SCALE EVIDENCE ============== -->
+<section id="small-scale">
+  <h2>Small-scale evidence</h2>
+  <p>The recipe works because of three layered facts: the dense calibration sweep gives broad, well-separated optima (so reuse is forgiving); fixing those values and scaling only the MoE architecture gives consistent loss reductions (the cleanest possible "tune-once" test); and sweeping any AdamW hyperparameter at fixed MoE architecture keeps the optimum in the same window. We show each one in order.</p>
 
-  <h3>Small-scale: optima align across MoE settings</h3>
-  <p>In controlled language-model and diffusion-transformer proxy sweeps, the loss vs. learning rate curves stay tightly aligned across activated-expert counts — with only the minor drift the theory predicts.</p>
+  <h3>The small-dense calibration sweep</h3>
+  <p>Step 1 of the recipe is a single sweep on a small dense FFN proxy. For both modalities we scan three hyperparameters — learning rate, weight decay, and initialization std — at proxy backbone width $d_\star = 128$. The optima are broad and well-separated, which is what makes them easy to reuse downstream:</p>
 
   <figure>
-    <div class="img-pair">
-      <img src="figures/activated_experts_lr_lm.png" alt="LM learning-rate sweep across activated-expert counts.">
-      <img src="figures/activated_experts_lr_df.png" alt="Diffusion learning-rate sweep across activated-expert counts.">
+    <div class="img-grid-3x2">
+      <img src="figures/dense_sweep_lm_lr.png" alt="LM dense baseline: validation loss vs. learning rate.">
+      <img src="figures/dense_sweep_lm_wd.png" alt="LM dense baseline: validation loss vs. weight decay.">
+      <img src="figures/dense_sweep_lm_init.png" alt="LM dense baseline: validation loss vs. initialization std.">
+      <img src="figures/dense_sweep_df_lr.png" alt="Diffusion dense baseline: training loss vs. learning rate.">
+      <img src="figures/dense_sweep_df_wd.png" alt="Diffusion dense baseline: training loss vs. weight decay.">
+      <img src="figures/dense_sweep_df_init.png" alt="Diffusion dense baseline: training loss vs. initialization std.">
     </div>
-    <figcaption>Activated-experts learning-rate sweep at fixed total experts and per-expert width, for language-model (left) and diffusion-transformer (right) proxies. The optimal LR region is broad and relatively stable across <code>a</code>, with only the minor drift the theory predicts.</figcaption>
+    <figcaption>Small-dense calibration sweeps ($d_\star=128$, 25k steps). Each column scans one hyperparameter — learning rate, weight decay, init std. These six curves produce the small-dense reference values used in the <a href="#example">worked example</a> above: LM $(\text{LR}, \text{WD}, \sigma_\text{init}) = (10^{-3},\ 0.10,\ 10^{-2})$; diffusion $(4.52\!\times\!10^{-3},\ 0.02,\ 2\!\times\!10^{-2})$. The MoE-transfer evidence below verifies that these dense-tuned values continue to be near-optimal once Complete-muE plugs them into any MoE configuration.</figcaption>
   </figure>
 
-  <h3>Small-scale: fixed-LR scaling works across MoE axes</h3>
-  <p>The more direct test: fix all AdamW hyperparameters at the dense-tuned values (LM: $\text{LR}=10^{-3}$, init std $=10^{-2}$, $\text{WD}=0.1$; Diffusion: $\text{LR}=1.6\times10^{-3}$, init std $=2\times10^{-2}$, $\text{WD}=10^{-2}$), then scale only the MoE architecture along four axes. Activated experts, total capacity, granularity, and depth all give consistent loss reductions for both modalities — no per-setting retuning.</p>
+  <h3>Fixed-LR scaling: the cleanest tune-once test</h3>
+  <p>The most direct check of the recipe is to <em>fix</em> all AdamW hyperparameters at the small-dense calibration values (LM: $\text{LR}=10^{-3}$, $\text{WD}=0.10$, init std $=10^{-2}$; Diffusion: $\text{LR}=4.52\!\times\!10^{-3}$, $\text{WD}=0.02$, init std $=2\!\times\!10^{-2}$) and then scale only the MoE architecture along four axes. If the recipe really is tune-once-and-transfer, loss should drop monotonically and consistently as the architecture grows — no per-setting re-tuning. That is what we see:</p>
 
   <figure>
     <div class="img-grid-4x2">
@@ -576,10 +628,54 @@ window.MathJax = {
 
   <p>One pattern stands out across the four panels: <strong>capacity scaling (more total experts at fixed activated count) drives substantially lower loss than granularity scaling</strong> at the same fixed hyperparameters. Among the MoE quality knobs, total-expert count is the strongest lever per unit of training compute — which, conveniently, is also the cheapest one to scale, as we'll see in the systems benchmark below.</p>
 
-  <h3>Large-scale: small dense calibration → large MoE deployment, five training regimes</h3>
+  <h3>Activated experts: optima align across LR, WD, init, and the initial loss curve</h3>
+  <p>The fixed-LR test above is the headline. The next two subsections answer the natural follow-up question: <em>why</em> is fixed-LR scaling so clean? Because the LR/WD/init optima are themselves stable across MoE configurations. Start with the most theory-loaded axis: the activated-expert count $a$ (Bridge II in the recipe). We sweep the three AdamW hyperparameters (LR, WD, init std) plus the initial-training-loss trajectory, all at fixed total experts and per-expert width:</p>
+
+  <figure>
+    <div class="img-grid-2x4">
+      <img src="figures/activated_experts_lr_lm.png" alt="LM learning-rate sweep across activated-expert counts.">
+      <img src="figures/activated_experts_lr_df.png" alt="Diffusion learning-rate sweep across activated-expert counts.">
+      <img src="figures/activated_experts_wd_lm.png" alt="LM weight-decay sweep across activated-expert counts.">
+      <img src="figures/activated_experts_wd_df.png" alt="Diffusion weight-decay sweep across activated-expert counts.">
+      <img src="figures/activated_experts_init_lm.png" alt="LM init-std sweep across activated-expert counts.">
+      <img src="figures/activated_experts_init_df.png" alt="Diffusion init-std sweep across activated-expert counts.">
+      <img src="figures/activated_experts_initial_loss_lm.png" alt="LM initial training-loss curves across activated-expert counts.">
+      <img src="figures/activated_experts_initial_loss_df.png" alt="Diffusion initial training-loss curves across activated-expert counts.">
+    </div>
+    <figcaption>Activated-experts sweep at fixed total experts and per-expert width, for LM (left column) and diffusion (right column). Rows, top to bottom: <strong>learning rate</strong>, <strong>weight decay</strong>, <strong>initialization std</strong>, and <strong>initial training loss</strong> (first ~100 steps). For all three optimizer hyperparameters the optimal region is broad and relatively stable across $a$, with only the minor drift the theory predicts. The initial-loss panel is the cleanest check of all: the trajectories for different $a$ overlap almost exactly during the first ~100 steps — what you'd expect if Complete-muE is actually preserving the per-step update size across architectures, before the longer-horizon $\sigma_0$ drift starts to matter.</figcaption>
+  </figure>
+
+  <h3>LR optima persist across the other MoE architectural axes</h3>
+  <p>Bridge II covered activated experts. The follow-up question is whether the same LR transfer holds for the <em>other</em> MoE architectural knobs — capacity (total experts $N$), fixed-density granularity, shared experts, group-balanced routing, depth, and backbone width. We sweep each axis individually, with Complete-muE applied first and only the base LR scanned. The optima stay aligned across all six axes for both LM and diffusion:</p>
+
+  <figure>
+    <div class="img-grid-4x3">
+      <img src="figures/lr_sweep_capacity_lm.png" alt="LM LR sweep across MoE total-expert count (capacity).">
+      <img src="figures/lr_sweep_capacity_df.png" alt="DF LR sweep across MoE total-expert count (capacity).">
+      <img src="figures/lr_sweep_granularity_lm.png" alt="LM LR sweep across fixed-density granularity.">
+      <img src="figures/lr_sweep_granularity_df.png" alt="DF LR sweep across fixed-density granularity.">
+      <img src="figures/lr_sweep_shared_lm.png" alt="LM LR sweep across number of shared experts.">
+      <img src="figures/lr_sweep_shared_df.png" alt="DF LR sweep across number of shared experts.">
+      <img src="figures/lr_sweep_grouped_lm.png" alt="LM LR sweep across group-balanced-routing variants.">
+      <img src="figures/lr_sweep_grouped_df.png" alt="DF LR sweep across group-balanced-routing variants.">
+      <img src="figures/lr_sweep_depth_lm.png" alt="LM LR sweep across depth (layer count).">
+      <img src="figures/lr_sweep_depth_df.png" alt="DF LR sweep across depth (layer count).">
+      <img src="figures/lr_sweep_width_lm.png" alt="LM LR sweep across backbone width.">
+      <img src="figures/lr_sweep_width_df.png" alt="DF LR sweep across backbone width.">
+    </div>
+    <figcaption>Learning-rate sweeps across six MoE architectural axes — top to bottom: <strong>capacity</strong> (total experts $N$), <strong>fixed-density granularity</strong> (more, smaller experts at constant $a/N$), <strong>shared-expert</strong> count, <strong>group-balanced routing</strong>, <strong>depth</strong>, and <strong>backbone width</strong>. Each row pairs LM (left) and diffusion (right). With Complete-muE applied first, the LR optimum is preserved within a narrow window across every axis and both modalities. The accompanying attainable-loss trends are also informative: <strong>capacity</strong> and <strong>granularity</strong> scaling both reduce loss; <strong>shared-expert</strong> count increasing tends to <em>raise</em> loss, suggesting shared experts are not needed for quality unless they're useful for system-level overlap of compute and communication in expert-parallel training/inference.</figcaption>
+  </figure>
+
+  <p>Combined with the activated-experts sweep above, this covers <em>every</em> MoE architectural axis the paper studies. The takeaway is uniform: once Complete-muE plugs the dense-tuned hyperparameters into the new architecture, the LR optimum stays put. There is no per-axis re-tuning step.</p>
+</section>
+
+<!-- ============== LARGE-SCALE EVIDENCE ============== -->
+<section id="large-scale">
+  <h2>Large-scale evidence</h2>
+
   <div class="callout">
     <p>The point of the recipe is the asymmetry: <strong>tuning is done on a small dense proxy, deployment is at large MoE scale.</strong> All sweeps that produced the calibrated hyperparameters were run at proxy backbone width $d_\star = 128$ on short runs (25k–100k steps). The large-scale runs then use Complete-muE to transfer to backbone width $d = 1024$ (8× wider, ~6.3B total MoE parameters with ~0.62B active) — a setting that would be enormously expensive to sweep directly.</p>
-    <p>At this scale, all four multimodal diffusion regimes — $256$P images, $512$P images, $240$P key frames, and $240$P $5$s videos — share <strong>one</strong> hyperparameter setting from the small-dense calibration ($\text{LR} = 2.26 \times 10^{-3}$, $\text{WD} = 0.01$). The LM training run uses one other ($\text{LR} = 5\times 10^{-4}$, $\text{WD} = 0.05$). Each MoE configuration is compared to its dense baseline at those same hyperparameters.</p>
+    <p>The hyperparameters used for these large runs are <strong>exactly</strong> what the <a href="#example">worked example</a> above produces. All four multimodal diffusion regimes — $256$P images, $512$P images, $240$P key frames, and $240$P $5$s videos — share the diffusion setting derived there: $\text{LR} = 2.26\!\times\!10^{-3}$, $\text{WD} = 0.01$, base init std $= 0.02$. The LM run uses the LM setting from the same recipe: $\text{LR} = 5\!\times\!10^{-4}$, $\text{WD} = 0.05$, base init std $= 0.01$. The <code>128e8a1s</code> MoE configuration in the benchmark table below is the exact architecture the example walks through. Each MoE configuration is compared to its dense baseline at those same hyperparameters.</p>
     <p>Every setting delivers consistent MoE-over-dense convergence speedup, with no per-setting retuning:</p>
     <ul>
       <li>$\sim\!2.5\times$ on $256$P images</li>
@@ -668,11 +764,88 @@ window.MathJax = {
   </div>
 
   <p>Average score: <strong>44.3 → 49.1</strong> for the group-balanced variant and <strong>44.3 → 50.6</strong> for the non-grouped variant — a +4.8 to +6.3 point improvement on average, again at the dense-tuned hyperparameters.</p>
+</section>
 
-  <h3>Bonus: large MoEs train at near-dense cost</h3>
-  <p>The other half of the practical win is that MoE training is <em>cheap</em>, especially along the capacity axis that gave the biggest loss gain above. On a single H100 80GB GPU, scaling from $8$ to $256$ total experts (at a fixed $8$ activated) raises step latency only from $87.8$ to $97.0$ ms/step — just $1.08\text{-}1.20\times$ the $81.0$ ms dense SwiGLU baseline. So you can grow MoE parameter count by an order of magnitude while keeping training cost essentially flat.</p>
+<!-- ============== COST BONUS ============== -->
+<section id="cost">
+  <h2>Bonus: large MoEs train at near-dense cost</h2>
+  <p>Everything above is about <em>tuning</em> being cheap with Complete-muE. The other half of the practical win is that the <em>training</em> itself — at least along the capacity axis that gave the biggest loss gain in the small-scale evidence — is also cheap. On a single H100 80GB GPU, scaling from $8$ to $256$ total experts (at a fixed $8$ activated) raises step latency only from $87.8$ to $97.0$ ms/step — just $1.08\text{-}1.20\times$ the $81.0$ ms dense SwiGLU baseline. So you can grow MoE parameter count by an order of magnitude while keeping training cost essentially flat.</p>
   <p>For context, reaching comparable parameter count by widening a dense model instead would push step latency from $81.0$ to $667.6$ ms ($8\times$ slower) before larger sizes simply run out of memory. The same comparison goes for granularity: fine-grained partitioning ($k = 2 \to 64$) raises latency from $84.1$ to $135.0$ ms/step — not free, but still far cheaper than dense width scaling.</p>
   <p>Bottom line: <strong>large MoEs trained via capacity scaling are nearly free relative to dense, and Complete-muE makes them tunable for free, too</strong>. Both halves of the win compound.</p>
+</section>
+
+<!-- ============== THEORY (insight, bridges, calibration as h3) ============== -->
+<section id="theory-intro">
+  <h2>What's actually going on under the recipe</h2>
+  <p>If you walked through the <a href="#example">worked example</a>, you already used both bridges: Step 2 (the MoE layer rule) <em>is</em> Bridge I — active-width $\mu\text{P}$ — and Step 1 (the global batch/duration rescaling) plus the implicit per-expert workload accounting is what Bridge II handles. The next two sections name the two operations, explain why each works at first order, and then flag the one second-order effect — a bounded $\sigma_0$ drift — that keeps the transfer honest rather than miraculous.</p>
+</section>
+
+<!-- ============== INSIGHT ============== -->
+<section id="insight">
+  <h2>The core insight: active width + expert workload</h2>
+
+  <p>Complete-muE's main observation is that you can take the messy MoE design space and decompose it into two clean, well-understood steps. Each step changes <em>one</em> thing.</p>
+
+  <div class="callout">
+    <p><strong>Step 1 — Active width.</strong> A sparse MoE block that uses $a$ experts of width $h$ behaves, to first order, like a dense FFN with hidden width $H_a = a \cdot h$. This single quantity — the <em>active width</em> — governs everything that classical $\mu\text{P}$ knows how to handle.</p>
+    <p><strong>Step 2 — Expert workload.</strong> Once active width is held fixed, the only remaining thing that changes when you flip between dense and sparse, or vary the activated-expert count, is how many tokens each expert sees per step. That's exactly the SDE setting — but applied to the <em>per-expert</em> training process rather than the whole model.</p>
+  </div>
+
+  <p>Decomposing the problem this way is the entire trick. Each step is a known problem with a known answer. The hard MoE-specific cases — total expert count, granularity, hybrids with shared experts and group-balanced routing — turn out to be <em>compositions</em> of these two steps. Nothing new needs to be invented for them.</p>
+</section>
+
+<!-- ============== BRIDGES (incl. calibration as h3) ============== -->
+<section id="bridges">
+  <h2>Two bridges from dense to any MoE</h2>
+
+  <p>The teaser figure at the top of this post is the picture of these two bridges: the two green diagonal arrows of the triangle are Bridge I (left, marked $\mu\text{P}$) and Bridge II (right, marked $\mu\text{P}$ + SDE); the red dashed bar at the bottom is the direct dense-to-sparse jump that <em>doesn't</em> transfer.</p>
+
+  <h3>Bridge I: Dense FFN ↔ Dense MoE</h3>
+  <p>The first bridge says: a dense FFN of width $H$ and a "Dense MoE"<aside class="sidenote def">A <em>Dense MoE</em> is an MoE block where every expert is active for every token ($a = N$). Architecturally it looks like an MoE — multiple experts, a router, normalized weights — but data-wise every parameter sees every token, like a single dense FFN of active width $H = Nh$. It is the analytical stepping-stone between truly dense and sparse routing.</aside> with $N$ experts of width $h = H/N$ (every expert active for every token) carry the same forward signal and the same per-step update size, as long as you do two small things:</p>
+  <ul>
+    <li>Use an output multiplier $A = d/H$ on the down-projection (where $d$ is the residual width). This is the standard $\mu\text{P}$ factor for a width-$H$ FFN.</li>
+    <li>Use a <em>route scale</em> equal to the number of activated experts. Normalized routing averages expert outputs, which would otherwise shrink the update by $1/a$; the route scale undoes that.</li>
+  </ul>
+
+  <div class="under-hood">
+    <p class="hood-label">Under the hood</p>
+    <p>For a unit-expansion dense companion at backbone width $d$, the matching rule for the FFN/MoE output branch is</p>
+    <p>$$A(H) = \frac{d}{H}, \qquad \sigma_{\mathrm{down}}(d, H) = \left(\frac{H}{d}\right)^{1/2} \sigma_{\mathrm{down}}^{(1)}(d), \qquad \eta_{\mathrm{down}}(d, H) = \eta_{\mathrm{down}}^{(1)}(d).$$</p>
+    <p>This is essentially $\mu\text{P}$ applied to the active width $H$, plus a normalized-route correction $r_a = a$.</p>
+  </div>
+
+  <h3>Bridge II: Dense MoE ↔ Sparse MoE</h3>
+  <p>The second bridge handles the move from a Dense MoE (all $N$ experts active) to a sparse MoE (only $a < N$ active). Once Bridge I is applied at the active width $H_a = ah$, the only remaining change is the per-expert data exposure.</p>
+  <p>Here's the elegant cancellation: when you switch from $a$ activated experts to $a'$ at fixed global batch size and steps, each expert's <em>batch</em> changes by the same factor as its <em>training duration</em>. Both go up or down together by $a'/a$. The standard SDE correction <em>cancels</em>:</p>
+
+  <div class="under-hood">
+    <p class="hood-label">Under the hood</p>
+    <p>$$\rho_B^{\mathrm{exp}} = \frac{B_{\mathrm{exp}}(a')}{B_{\mathrm{exp}}(a)} = \frac{a'}{a}, \qquad \rho_D^{\mathrm{exp}} = \frac{D_{\mathrm{exp}}(a')}{D_{\mathrm{exp}}(a)} = \frac{a'}{a}.$$</p>
+    <p>So the dense-style correction $\eta' \approx \eta\sqrt{\rho_B^{\mathrm{exp}}/\rho_D^{\mathrm{exp}}} = \eta$ — no first-order learning rate or weight decay multiplier is needed.</p>
+  </div>
+
+  <p>What does change is the expert-side noise-to-signal level $\sigma_0(a) = \eta \cdot \sigma_{\mathrm{exp}}(a)$, where $\sigma_{\mathrm{exp}}(a)$ is the per-expert gradient-noise standard deviation (which scales like $1/\sqrt{B_\mathrm{exp}(a)}$ with the per-expert batch). Making the MoE denser (larger $a$) lowers the per-step gradient noise, which is why denser MoEs can reach lower loss at the same hyperparameters — we return to this caveat in the next section.</p>
+
+  <h3>Everything else is composition</h3>
+  <p>That's it for new primitives. Every other MoE setting — total capacity, granularity, hybrid blocks with shared experts and grouped routing — is built by composing Bridge I and Bridge II:</p>
+  <ul>
+    <li><strong>Total capacity ($N \to N'$):</strong> first widen the Dense-MoE companion (Bridge I), then re-sparsify back to $a$ active experts (Bridge II). The two factors cancel exactly.</li>
+    <li><strong>Granularity at fixed density ($s = a/N$):</strong> the active width is preserved by construction, so the same sparse-layer rule applies.</li>
+    <li><strong>Hybrid blocks (shared + grouped + routed):</strong> use one common active-width multiplier over the total active width $H_{\mathrm{tot}}$ and apply route scale only to routed branches.</li>
+  </ul>
+
+  <h3 id="calibration">Bridge II in practice: a second-order drift caveat</h3>
+  <p>The first-order SDE correction in Bridge II cancels exactly, but there's a second-order effect we want to be upfront about: the per-step expert-side noise $\sigma_0(a)$ shifts when $a$ changes. The change is bounded:</p>
+
+  <p>$$\sigma_0(a') = \frac{\sigma_0(a)}{\sqrt{\rho_B^{\mathrm{exp}}}}.$$</p>
+
+  <p>This means Bridge II is not a <em>strict</em> SDE invariance — it's a relatively stable transfer with some mild residual drift in the optimal hyperparameters. The same kind of bounded drift shows up in two other places in the paper:</p>
+  <ul>
+    <li><strong>Capacity scaling</strong> (varying $N$ at fixed $a, h$), because the composition that builds it uses Bridge II as a sub-step.</li>
+    <li><strong>Batch-size transfer at fixed training iterations</strong>, where the gradient noise $\sigma_0$ shifts even though the optimization horizon $H_{\mathrm{SDE}} = T\eta^2$ is preserved.</li>
+  </ul>
+
+  <p>The empirical question is whether this drift is small enough to ignore in practice. The evidence in <a href="#small-scale">"Small-scale evidence"</a> and <a href="#large-scale">"Large-scale evidence"</a> — the activated-experts sweep, the architectural-axis sweeps, the fixed-LR scaling, and the large-scale runs at one shared hyperparameter setting — and the paper's calibration both answer <strong>yes</strong>.</p>
 </section>
 
 <!-- ============== TAKEAWAYS ============== -->
@@ -681,7 +854,7 @@ window.MathJax = {
 
   <ul class="takeaway-list">
     <li><strong>Small dense sweep, large MoE deployment.</strong> A single small-dense-proxy sweep is enough — no architecture-specific re-tuning at large scale.</li>
-    <li><strong>Two bridges, everything else by composition.</strong> Bridge I (active-width $\mu$P) + Bridge II (per-expert workload) cover the whole MoE design space without new primitives.</li>
+    <li><strong>Two bridges, everything else by composition.</strong> Bridge I (active-width $\mu\text{P}$) + Bridge II (per-expert workload) cover the whole MoE design space without new primitives.</li>
     <li><strong>The math is honest about its limits.</strong> The SDE cancellation is first-order, with a bounded second-order $\sigma_0$ drift. Small-scale sweeps and large-scale runs both confirm this drift is small enough in practice.</li>
     <li><strong>Practical wins are real and measurable.</strong> $4.5\times$ on $240$P $5$s video and $5.3\text{-}5.5\times$ on LLM, all at the dense baseline's hyperparameters.</li>
   </ul>
@@ -719,7 +892,7 @@ window.MathJax = {
 
 <section id="references">
   <h2>References</h2>
-  <p class="references-intro">Foundational works Complete-muE builds on: $\mu$P-style transfer, SDE-based optimizer scaling, MoE-specific transfer, and the broader sparse-MoE literature. Citations marked in the body link to the corresponding margin note; the full list is here.</p>
+  <p class="references-intro">Foundational works Complete-muE builds on: $\mu\text{P}$-style transfer, SDE-based optimizer scaling, MoE-specific transfer, and the broader sparse-MoE literature. Citations marked in the body link to the corresponding margin note; the full list is here.</p>
   <ol class="references">
     <li>
       Yang, G., Hu, E. J., Babuschkin, I., Sidor, S., Liu, X., Farhi, D., Ryder, N., Pachocki, J., Chen, W., &amp; Gao, J. (2022).
@@ -768,7 +941,7 @@ window.MathJax = {
     </li>
     <li>
       Zheng, C., Lou, A., Liu, C., Wei, X., Liu, Z., &amp; Ermon, S. (2025).
-      <em>Scaling Diffusion Transformers Efficiently via $\mu$P.</em>
+      <em>Scaling Diffusion Transformers Efficiently via $\mu\text{P}$.</em>
       NeurIPS. <a href="https://arxiv.org/abs/2505.15270" target="_blank" rel="noopener">arXiv:2505.15270</a>.
     </li>
     <li>

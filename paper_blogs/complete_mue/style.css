@@ -183,19 +183,17 @@ figure.post-cover svg {
   display: block;
   width: 100%;
   height: auto;
-  background: #fff;
+  background: transparent;
   border-radius: 8px;
   border: 1px solid var(--rule);
   box-shadow: 0 1px 3px rgba(31, 29, 26, 0.04);
 }
 
 figure.post-cover svg text {
+  /* All text in the teaser figure uses a single font family (Inter sans).
+     Italic / bold variations come from font-style / font-weight on the text
+     elements themselves, not from a different font family. */
   font-family: var(--sans);
-}
-
-figure.post-cover .label-italic {
-  font-family: var(--serif);
-  font-style: italic;
 }
 
 figure.post-cover figcaption {
@@ -336,6 +334,19 @@ figure.post-cover figcaption {
   color: var(--accent);
   font-variant-numeric: tabular-nums;
   margin-right: 0.35em;
+}
+
+/* Definition sidenotes — distinguished from citation sidenotes by a warm
+   caramel left border and an "ⓘ" prefix instead of a numbered marker. */
+.sidenote.def {
+  border-left-color: var(--accent-warm);
+}
+
+.sidenote.def::before {
+  content: "ⓘ  ";
+  color: var(--accent-warm);
+  font-weight: 700;
+  margin-right: 0.2em;
 }
 
 /* Inline superscript citation marker [N] becomes a small sans-serif sup */
@@ -679,11 +690,63 @@ main figure figcaption {
   margin: 0;
 }
 
+.img-grid-3x2 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+}
+
+.img-grid-3x2 img {
+  margin: 0;
+}
+
+/* 4-column x 3-row grid (used by the MoE architectural-axes LR sweeps:
+   6 axes paired into LM/DF columns) */
+.img-grid-4x3 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.45rem;
+}
+
+.img-grid-4x3 img {
+  margin: 0;
+}
+
+/* 2-column x 4-row grid (used by the activated-experts sweep: 4 hyperparameter
+   types stacked, each row paired LM/DF) */
+.img-grid-2x4 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.img-grid-2x4 img {
+  margin: 0;
+}
+
 @media (max-width: 800px) {
   .img-grid-4x2 {
     grid-template-columns: repeat(2, 1fr);
   }
+  .img-grid-3x2 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .img-grid-4x3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
   .img-trio {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .img-grid-3x2 {
+    grid-template-columns: 1fr;
+  }
+  .img-grid-4x3 {
+    grid-template-columns: 1fr;
+  }
+  .img-grid-2x4 {
     grid-template-columns: 1fr;
   }
 }
@@ -746,6 +809,25 @@ table.benchmark th:not(:first-child) {
 
 table.benchmark tbody tr:nth-child(even) {
   background: var(--bg-soft-2);
+}
+
+/* Setup table for the worked-example section: grouped rows with subhead separators */
+table.setup-table tr.sep td {
+  background: var(--bg-soft);
+  color: var(--accent-deep);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding-top: 0.7rem;
+  padding-bottom: 0.4rem;
+  border-top: 2px solid var(--rule);
+}
+
+/* Keep-case escape for characters inside an uppercased separator row
+   (used so "μ" stays as lowercase Greek mu instead of being transformed). */
+table.setup-table tr.sep td .keep-case {
+  text-transform: none;
 }
 
 /* ---------------- Tuning menu ---------------- */
