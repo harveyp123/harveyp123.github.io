@@ -5,30 +5,34 @@
    ============================================================ */
 
 :root {
-  /* Text */
-  --fg: #1f1d1a;             /* warm near-black */
-  --fg-muted: #6a6155;       /* warm muted gray */
-  --fg-faint: #8a8275;       /* warm light gray, for captions */
+  /* Text — cooled neutral (no warm bias) */
+  --fg: #111111;             /* near-black */
+  --fg-muted: #555a60;       /* cool muted gray */
+  --fg-faint: #8a8e94;       /* cool light gray, for captions */
 
-  /* Surfaces */
-  --bg: #fbfaf6;             /* page bg — warm off-white */
-  --bg-soft: #f0ecdf;        /* warm beige-cream */
-  --bg-soft-2: #f3efe3;      /* slightly lighter warm */
-  --bg-callout: #e8efee;     /* pale teal-tinted neutral, harmonizes with accent */
-  --bg-callout-headline: #f6e8c5; /* warm sand for TL;DR headline */
-  --bg-hood: #efe9d8;        /* warm hood for "Under the hood" math */
-  --bg-code: #ede7d8;        /* warm tan for inline code */
+  /* Surfaces — pure white everywhere; content blocks rely on borders. */
+  --bg: #ffffff;             /* page bg — pure white */
+  --bg-soft: #ffffff;        /* white */
+  --bg-soft-2: #ffffff;      /* white */
+  --bg-callout: #ffffff;     /* white callout (distinguished by left border) */
+  --bg-callout-headline: #ffffff; /* white TL;DR (red left border) */
+  --bg-hood: #ffffff;        /* white "Under the hood" box */
+  --bg-code: #f4f4f6;        /* very subtle tint for inline code legibility */
 
-  /* Accent — deep teal */
+  /* Accent — deep teal (kept as the calm body accent for links/headings) */
   --accent: #1f5f5b;
   --accent-soft: #3a8a85;
   --accent-deep: #134541;
   --accent-warm: #b67b30;    /* caramel, complementary to teal */
   --accent-warm-light: #d6a45a;
 
-  /* Structure */
-  --rule: #d8d2c2;
-  --rule-soft: #e6e0d0;
+  /* Adobe brand red — used sparingly: byline, key brand chips */
+  --adobe-red: #ED2224;
+  --adobe-red-deep: #c91b1d;
+
+  /* Structure — cool neutral rules */
+  --rule: #e1e1e4;
+  --rule-soft: #ececef;
 
   /* Typography */
   --serif: "Newsreader", "Iowan Old Style BT", Georgia, "Times New Roman", serif;
@@ -90,10 +94,10 @@ a:hover {
   margin: 0;
   font-family: var(--sans);
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: var(--accent);
+  color: var(--adobe-red);
 }
 
 .post-heading .post-title {
@@ -148,7 +152,15 @@ a:hover {
   margin: 0;
   font-size: 0.9rem;
   font-style: italic;
-  color: var(--fg-faint);
+  color: var(--adobe-red);
+  font-weight: 600;
+}
+
+/* Adobe Research brand chip — used in body / footer where the affiliation
+   is named again. */
+.adobe-brand {
+  color: var(--adobe-red);
+  font-weight: 600;
 }
 
 /* Tagline below the cover figure */
@@ -186,7 +198,7 @@ figure.post-cover svg {
   background: transparent;
   border-radius: 8px;
   border: 1px solid var(--rule);
-  box-shadow: 0 1px 3px rgba(31, 29, 26, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 figure.post-cover svg text {
@@ -573,13 +585,13 @@ pre.bibtex::-webkit-scrollbar-thumb {
 
 .callout.headline {
   background: var(--bg-callout-headline);
-  border-left-color: var(--accent-warm);
+  border-left: 4px solid var(--adobe-red);
   font-size: 1.04rem;
 }
 
 .under-hood {
   background: var(--bg-hood);
-  border: 1px solid #d6cdb6;
+  border: 1px solid var(--rule);
   border-radius: 6px;
   padding: 0.9rem 1.1rem;
   margin: 1rem 0;
@@ -756,6 +768,66 @@ main figure figcaption {
     grid-template-columns: 1fr;
   }
   .img-grid-4x2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------- Video comparison grid ---------------- */
+
+.video-figure {
+  margin: 1.4rem 0 1.8rem;
+}
+
+.video-pair-block {
+  margin: 0.4rem 0 1.6rem;
+}
+
+.video-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.video-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.video-cell video {
+  width: 100%;
+  height: auto;
+  background: #000;
+  border-radius: 4px;
+  display: block;
+}
+
+.video-cell .video-label {
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  margin: 0.3rem 0 0;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+}
+
+.video-prompt {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0.55rem 0 0;
+  color: var(--fg);
+}
+
+.video-prompt .video-prompt-tag {
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-right: 0.35rem;
+}
+
+@media (max-width: 720px) {
+  .video-pair {
     grid-template-columns: 1fr;
   }
 }

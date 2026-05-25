@@ -256,12 +256,13 @@ window.MathJax = {
     <ol>
       <li><a href="#tldr">TL;DR</a></li>
       <li><a href="#problem">Why MoE tuning is so painful</a></li>
+      <li><a href="#large-scale">Large-scale evidence</a></li>
+      <li><a href="#qualitative">Qualitative dense-vs-MoE samples</a></li>
+      <li><a href="#cost">Bonus: MoEs train at near-dense cost</a></li>
       <li><a href="#recipe">The recipe in three steps</a></li>
       <li><a href="#tuning-menu">Tuning menu at a glance</a></li>
       <li><a href="#example">Worked example: small → large MoE</a></li>
       <li><a href="#small-scale">Small-scale evidence</a></li>
-      <li><a href="#large-scale">Large-scale evidence</a></li>
-      <li><a href="#cost">Bonus: MoEs train at near-dense cost</a></li>
       <li><a href="#theory-intro">What's under the recipe</a></li>
       <li><a href="#insight">Active width + expert workload</a></li>
       <li><a href="#bridges">Two bridges from dense to any MoE</a></li>
@@ -279,7 +280,8 @@ window.MathJax = {
   <h2>TL;DR</h2>
   <div class="callout headline">
     <p><strong>If you train Mixture-of-Experts (MoE) transformers, you don't need to re-sweep learning rate, weight decay, or init for every architecture.</strong> Tune them once on a small dense FFN proxy, plug the values into a deterministic rule, and they transfer near-optimally to <em>any</em> large MoE configuration — different numbers of activated experts, different total expert counts, different granularities, shared experts, group-balanced routing, width, depth, and batch size.</p>
-    <p>The whole point is the asymmetry: <strong>small dense sweep, large MoE deployment</strong>. Our large-scale runs tune at proxy width $d_\star = 128$ and deploy at $d = 1024$ ($8\times$ wider). At that scale the recipe gives <strong>$\sim\!4.5\times$ convergence speedup</strong> for $240$P $5$s video diffusion and <strong>$\sim\!5.3\text{-}5.5\times$</strong> for LLM training versus a dense baseline at the <em>same</em> hyperparameters.</p>
+    <p><strong>The recipe is modality-agnostic.</strong> The exact same Complete-muE rule (one dense calibration → one transfer table) drives both <strong>language modelling</strong> and <strong>diffusion-based image/video generation</strong> — including text-to-image at $256$P / $512$P, $240$P key-frame synthesis, and $240$P $5$s text-to-video. Nothing in the rule is language-specific or vision-specific; it operates on the dense-vs-MoE structural change, which is shared across these architectures.</p>
+    <p>The whole point is the asymmetry: <strong>small dense sweep, large MoE deployment</strong>. Our large-scale runs tune at proxy width $d_\star = 128$ and deploy at $d = 1024$ ($8\times$ wider). At that scale the recipe gives <strong>$\sim\!4.5\times$ convergence speedup</strong> for $240$P $5$s video diffusion, <strong>$\sim\!2.5\times$</strong> for $256$P image diffusion, and <strong>$\sim\!5.3\text{-}5.5\times$</strong> for LLM training, all versus a dense baseline at the <em>same</em> hyperparameters.</p>
   </div>
   <p class="audience-note">
     👤 <strong>If you're new to MoE</strong>, start with <a href="#problem">why MoE tuning is so painful</a>, then read the rest top-to-bottom.
@@ -328,9 +330,290 @@ window.MathJax = {
   <p>So when you go from dense FFN to MoE, or change the MoE capacity, neither tool alone tells you what learning rate to use. Practitioners end up doing what they always did — another full hyperparameter sweep at the new architecture — and that gets expensive fast.</p>
 </section>
 
+<!-- ============== LARGE-SCALE EVIDENCE (relocated to the top — payoff first) ============== -->
+<section id="large-scale">
+  <h2>Large-scale evidence: what the recipe buys you</h2>
+
+  <div class="callout">
+    <p>The point of the recipe is the asymmetry: <strong>tuning is done on a small dense proxy, deployment is at large MoE scale.</strong> All sweeps that produce the calibrated hyperparameters run at proxy backbone width $d_\star = 128$ on short runs (25k–100k steps). The large-scale runs below then use Complete-muE to transfer to backbone width $d = 1024$ ($8\times$ wider, $\sim$6.3B total MoE parameters with $\sim$0.62B active) — a setting that would be enormously expensive to sweep directly. The <a href="#recipe">recipe</a> and <a href="#example">worked example</a> in the next sections show exactly how the small-proxy values flow into these large runs; the rest of this section is what comes out.</p>
+    <p>All four multimodal diffusion regimes — $256$P images, $512$P images, $240$P key frames, and $240$P $5$s videos — share the diffusion setting derived from the recipe: $\text{LR} = 2.26\!\times\!10^{-3}$, $\text{WD} = 0.01$, base init std $= 0.02$. The LM run uses the LM setting from the same recipe: $\text{LR} = 5\!\times\!10^{-4}$, $\text{WD} = 0.05$, base init std $= 0.01$. The <code>128e8a1s</code> MoE configuration in the benchmark table below is the exact architecture the <a href="#example">worked example</a> walks through end-to-end. Each MoE configuration is compared to its dense baseline at those same hyperparameters.</p>
+    <p>Every setting delivers consistent MoE-over-dense convergence speedup, with no per-setting retuning:</p>
+    <ul>
+      <li>$\sim\!2.5\times$ on $256$P images</li>
+      <li>$\sim\!4.5\times$ on $240$P $5$s videos</li>
+      <li>$\sim\!5.3\times$–$5.5\times$ on LLM training (100k iterations)</li>
+    </ul>
+    <p>This is the strongest form of empirical evidence the paper offers: <strong>cheap small-dense sweep → expensive large MoE training</strong>, across five very different landscapes, all delivering consistent gains.</p>
+  </div>
+
+  <figure>
+    <div class="img-grid-3x2">
+      <img src="figures/large_loss_256p.png" alt="Large-scale 256P image diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_512p.png" alt="Large-scale 512P image diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_240p_keyframe.png" alt="Large-scale 240P key-frame diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_240p_video.png" alt="Large-scale 240P 5s video diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_speedup_256p.png" alt="Large-scale 256P image convergence speedup, MoE vs. dense.">
+      <img src="figures/large_speedup_240p_video.png" alt="Large-scale 240P 5s video convergence speedup, MoE vs. dense.">
+    </div>
+    <figcaption>Large-scale multimodal diffusion training, dense vs. MoE, at <em>one</em> shared hyperparameter setting (LR = $2.26\!\times\!10^{-3}$, WD = $0.01$, base init std = $0.02$) — the exact configuration the <a href="#example">worked example</a> derives below. <strong>Top row — training loss across resolutions and modalities:</strong> $256$P images, $512$P images, $240$P key frames, $240$P $5$s videos. <strong>Bottom row — convergence speedup</strong> (dense steps / MoE steps to reach the same loss during the stable-LR phase of WSD) for the easiest and hardest regimes: $256$P images and $240$P $5$s videos. MoE keeps lower training loss in <em>every</em> resolution and modality, with $\sim\!2.5\times$ speedup at $256$P scaling up to $\sim\!4.5\times$ on $240$P $5$s video. The recipe transfers across genuinely different generation tasks — still image, key frame, video — not just one.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="img-trio">
+      <img src="figures/large_llm_train_loss.png" alt="Large-scale LLM training loss, dense vs. MoE.">
+      <img src="figures/large_llm_val_loss.png" alt="Large-scale LLM validation loss, dense vs. MoE.">
+      <img src="figures/large_llm_speedup.png" alt="Large-scale LLM convergence speedup, MoE vs. dense.">
+    </div>
+    <figcaption>Large-scale LLM training (100k iterations), dense vs. MoE variants <code>128e8a4g1s</code> and <code>128e8a1s</code> at one shared hyperparameter setting (LR = $5\times10^{-4}$, WD = $0.05$). Left: smoothed training loss. Middle: validation loss on C4. Right: convergence speedup vs. dense baseline. The MoE variants reach 5.3–5.5× convergence speedup over dense.</figcaption>
+  </figure>
+
+  <h3>Downstream benchmarks confirm the loss gain</h3>
+  <p>The training-loss advantage translates into downstream-task quality. After the same 100k-step LM training, both MoE variants substantially improve the dense baseline's average across 13 LM benchmarks:</p>
+
+  <div class="table-scroll">
+    <table class="benchmark">
+      <caption>Large-scale dense vs. MoE benchmark evaluation (5-shot, percentages). <strong>Bold</strong> = best per column.</caption>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>SVAMP</th>
+          <th>MMLU</th>
+          <th>ARC-Easy</th>
+          <th>ARC-Chall.</th>
+          <th>COPA</th>
+          <th>PIQA</th>
+          <th>HellaSwag</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dense</td>
+          <td>7.0</td><td>25.4</td><td>64.6</td><td>33.6</td><td>70.0</td><td>72.6</td><td>56.5</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a4g1s</code></td>
+          <td>9.7</td><td>25.9</td><td>71.2</td><td><strong>43.6</strong></td><td>80.0</td><td>77.7</td><td>69.3</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a1s</code></td>
+          <td><strong>10.0</strong></td><td><strong>26.2</strong></td><td><strong>72.9</strong></td><td>43.4</td><td><strong>85.0</strong></td><td><strong>77.8</strong></td><td><strong>69.4</strong></td>
+        </tr>
+      </tbody>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>WinoGrande</th>
+          <th>LAMBADA</th>
+          <th>BoolQ</th>
+          <th>AGIEval-RC</th>
+          <th>AGIEval-LR</th>
+          <th>AGIEval-SAT</th>
+          <th>Average</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dense</td>
+          <td>59.0</td><td>50.5</td><td>62.6</td><td>20.9</td><td><strong>27.3</strong></td><td>26.2</td><td>44.3</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a4g1s</code></td>
+          <td>65.2</td><td>61.9</td><td>63.4</td><td>22.8</td><td>27.1</td><td>20.9</td><td>49.1</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a1s</code></td>
+          <td><strong>66.5</strong></td><td><strong>63.4</strong></td><td><strong>63.9</strong></td><td><strong>27.2</strong></td><td>24.3</td><td><strong>27.2</strong></td><td><strong>50.6</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Average score: <strong>44.3 → 49.1</strong> for the group-balanced variant and <strong>44.3 → 50.6</strong> for the non-grouped variant — a +4.8 to +6.3 point improvement on average, again at the dense-tuned hyperparameters.</p>
+</section>
+
+<!-- ============== QUALITATIVE VIDEO COMPARISON ============== -->
+<section id="qualitative">
+  <h2>Qualitative samples: dense vs. MoE at identical training cost</h2>
+  <p>Loss curves and benchmark numbers show the recipe transfers numerically. The pairs below show what that looks like at the sample level: same text prompt, same training compute and hyperparameters, dense baseline on the left, MoE <code>128e8a1s</code> on the right. Both models share the diffusion setting derived from one small-dense calibration sweep — there is no per-architecture tuning between them.</p>
+
+  <figure class="video-figure">
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_1.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_1.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 1.</span> A Black man in casual attire is filmed in a close head-and-shoulders shot against a clean, neutral seamless backdrop that is entirely free of objects or distractions. The cinematographic composition is centered with shallow depth of field following the rule of thirds, while soft, diffused lighting flatters the subject's face. The camera opens with a handheld dolly-in, physically pushing forward to tighten the frame onto the subject. As the shot settles, the man bursts into a wide, broad smile — his teeth fully visible — his whole face lighting up with unmistakable joy and relaxed warmth.</p>
+    </div>
+
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_2.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_2.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 2.</span> At dawn, a vast wind farm stretches across mist-covered fields, towering turbines rotating in the foreground beneath a sky soaked in golden-hour warmth. Long shadows rake across the landscape as saturated, amber light bathes every surface, celebrating the beauty of green energy. The camera begins with a smooth dolly-in that draws the viewer into the scene before transitioning into a controlled wide-angle pan, first centering on the turbines, then slowly widening to reveal the full, sweeping expanse of the farm. The mist, the rotating blades, and the dramatic shadows combine to evoke the quiet power and vastness of renewable energy.</p>
+    </div>
+
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_3.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_3.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 3.</span> A vibrant red helicopter soars gracefully above a spectacular panorama of snow-covered mountain peaks glittering beneath a clear blue sky. Bright, hard sunlight floods the scene, creating sharp contrasts between dazzling white snow and deep cerulean sky. The camera holds a steady eye-level distance behind the aircraft, panning smoothly to keep the helicopter continuously centered in frame as it traverses the wide-angle composition. The bold crimson of the helicopter against the pristine alpine wilderness creates a striking visual contrast full of scale and grandeur.</p>
+    </div>
+
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_4.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_4.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 4.</span> In the silent depths of outer space, a lone astronaut floats weightlessly before a swirling magnetic field energy wormhole whose luminous glow pulses against a backdrop of stars and distant galaxies. Hard volumetric lighting, intensified by dramatic lens flare, carves the scene into high-contrast relief, while energy particles spiral through the void around the astronaut. The camera holds a static, centered eye-level wide-angle with shallow focus, placing the figure at the heart of the cosmic spectacle. Calm and contemplative, the astronaut observes the cascading energy in a scene that is simultaneously awe-inspiring and serene.</p>
+    </div>
+
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_5.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_5.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 5.</span> Several giant woolly mammoths stride purposefully across a serene, snow-blanketed meadow, their long, shaggy fur gently swaying with each lumbering step. Snow-covered trees frame the edges of the wide landscape while dramatic snow-capped mountains rise in the distance beneath a mid-afternoon sky of wispy clouds and warm, diffused sunlight. The camera sits at a low angle, static, its centered shallow-focus composition emphasizing the mammoths' imposing scale against the tranquil, expansive winter world. The soft light and still setting lend the scene an almost mythic, otherworldly calm.</p>
+    </div>
+
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_6.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_6.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 6.</span> In close-up, a steaming cup of coffee fills the frame — its frothy surface shimmering under soft, warm light — while two tiny pirate ships, meticulously crafted from sugar and spices, sail and battle across the swirling dark liquid. The camera pans left in a centered, shallow-focus composition, keeping the whimsical miniature vessels sharp against the silky blur of the coffee background. The ships' delicate sails catch the gentle light as they clash in a fierce, fantastical engagement, turning an ordinary cup of coffee into a photorealistic stage for maritime adventure.</p>
+    </div>
+
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_7.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_7.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 7.</span> Against a sweeping cinematic aerial view of rolling, snow-covered hills dotted with sparse winter trees, a polar bear — incongruously dressed in a black t-shirt — strums a bass guitar with deliberate, rhythmic intent. Natural daylight falls softly across the scene, casting gentle shadows that reveal the texture of fresh snow and the thick detail of the bear's fur. The camera pans slowly left in a wide-angle, shallow-focus, centered composition, granting full appreciation of the vast, pristine terrain. The bear bobs its head in time with its playing, creating a surreal and delightfully absurd juxtaposition of wilderness and rock-and-roll.</p>
+    </div>
+
+    <div class="video-pair-block">
+      <div class="video-pair">
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/dense_video_8.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">Dense baseline</p>
+        </div>
+        <div class="video-cell">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="video_comparison/moe_video_8.mp4" type="video/mp4">
+            Your browser does not support HTML5 video.
+          </video>
+          <p class="video-label">MoE <code>128e8a1s</code></p>
+        </div>
+      </div>
+      <p class="video-prompt"><span class="video-prompt-tag">Prompt 8.</span> A cozy living room bathed in warm, inviting light is captured from an elevated overhead perspective in a slow, deliberate pan across the space. The centered, shallow-focus composition draws attention to a large blank picture frame at the room's heart, encircled by an abundance of lush green potted plants that soften the neutral-toned interior. No action disturbs the scene; instead, the slow camera movement becomes the sole motion, guiding the viewer's eye through the tranquil arrangement and allowing the room's peaceful, plant-filled atmosphere to speak entirely for itself.</p>
+    </div>
+
+    <figcaption>Side-by-side $240$P $5$s video samples, dense vs. MoE <code>128e8a1s</code>, at matched training compute and a single set of dense-tuned hyperparameters. Prompts span human portrait, wide landscape, fast-moving subject, abstract cosmic, mythic creatures, photoreal close-up, surreal narrative, and static interior — chosen to stress different aspects of motion, lighting, and composition.</figcaption>
+  </figure>
+</section>
+
+<!-- ============== COST BONUS (relocated; part of the up-front "what it buys you" cluster) ============== -->
+<section id="cost">
+  <h2>Bonus: large MoEs train at near-dense cost</h2>
+  <p>The results above are about <em>tuning</em> being cheap with Complete-muE. The other half of the practical win is that the <em>training</em> itself — at least along the capacity axis that delivers the largest loss gain (we'll see this in the <a href="#small-scale">small-scale evidence</a> further down) — is also cheap. On a single H100 80GB GPU, scaling from $8$ to $256$ total experts (at a fixed $8$ activated) raises step latency only from $87.8$ to $97.0$ ms/step — just $1.08\text{-}1.20\times$ the $81.0$ ms dense SwiGLU baseline. So you can grow MoE parameter count by an order of magnitude while keeping training cost essentially flat.</p>
+  <p>For context, reaching comparable parameter count by widening a dense model instead would push step latency from $81.0$ to $667.6$ ms ($8\times$ slower) before larger sizes simply run out of memory. The same comparison goes for granularity: fine-grained partitioning ($k = 2 \to 64$) raises latency from $84.1$ to $135.0$ ms/step — not free, but still far cheaper than dense width scaling.</p>
+  <p>Bottom line: <strong>large MoEs trained via capacity scaling are nearly free relative to dense, and Complete-muE makes them tunable for free, too</strong>. Both halves of the win compound.</p>
+</section>
+
 <!-- ============== RECIPE ============== -->
 <section id="recipe">
   <h2>The recipe in three steps</h2>
+
+  <p>So how do you get the results above? Tune once on a small dense FFN proxy, then compose two short, deterministic tables — one MoE-architectural, one for batch/duration — to transfer those values to any MoE target.</p>
 
   <div class="recipe">
     <ol>
@@ -367,7 +650,7 @@ window.MathJax = {
   </div>
 
   <div class="menu-block">
-    <p class="menu-section-label">What you adjust per layer (MoE-architectural axes — all keyed on $H_{\mathrm{act}}$)</p>
+    <p class="menu-section-label">What you adjust per layer (architectural rules — keyed on the active width plus one &mu;P final-output factor)</p>
     <div class="table-scroll">
       <table class="tuning-menu">
         <thead>
@@ -407,6 +690,11 @@ window.MathJax = {
             <td>Router readout</td>
             <td>Standard $\mu\text{P}$ factors</td>
             <td>Treated like any $d$-controlled projection.</td>
+          </tr>
+          <tr>
+            <td>Final output-projection multiplier</td>
+            <td>$1/\rho_d$</td>
+            <td>Applied at the final embedding-to-output projection (LM head / diffusion noise- or velocity-prediction head). $\rho_d = d/d_\star$ is the backbone-width expansion ratio. This is a $\mu\text{P}$ width factor — independent of any MoE choice — but the table lists it here so every per-layer factor lives in one place.</td>
           </tr>
         </tbody>
       </table>
@@ -505,7 +793,7 @@ window.MathJax = {
         <tr class="sep"><td colspan="3"><span class="keep-case">μ</span>P per-layer scaling &nbsp;(every 2D linear projection inside the transformer block at the large MoE)</td></tr>
         <tr><td>Per-layer LR factor &nbsp;($\rho_d^{-1}$)</td><td>$\times 1$</td><td>$\times 1/8$</td></tr>
         <tr><td>Per-layer init-std factor &nbsp;($\rho_d^{-1/2}$)</td><td>$\times 1$</td><td>$\times 1/\sqrt{8}$</td></tr>
-        <tr><td>Final output-projection multiplier &nbsp;($1/m_d$, &nbsp;$m_d = \rho_d$)</td><td>$\times 1$</td><td>$\times 1/8$ &nbsp;(LM head / diffusion output projection)</td></tr>
+        <tr><td>Final output-projection multiplier &nbsp;($1/\rho_d$)</td><td>$\times 1$</td><td>$\times 1/8$ &nbsp;(LM head / diffusion output projection)</td></tr>
       </tbody>
     </table>
   </div>
@@ -528,7 +816,7 @@ window.MathJax = {
   <p>Standard $\mu\text{P}$ scales <em>every 2D linear projection</em> inside the transformer block — the FFN/MoE up, gate, and down projections, the router readout, the attention $Q$, $K$, $V$, and $O$ projections, plus anything else that is a learned $d_\text{in} \!\times\! d_\text{out}$ matrix. All of them inherit the same two width factors:</p>
   <p>$$\eta_{\text{per-layer}} \;\propto\; \rho_d^{-1} = 1/8, \qquad \sigma_{\text{per-layer}} \;\propto\; \rho_d^{-1/2} = 1/\sqrt{8}.$$</p>
   <p>In words: every such linear layer at $d = 1024$ uses $1/8$ the LR and $1/\sqrt{8}$ the init std of the same layer at $d = 128$, before any MoE-specific factors are applied on top.</p>
-  <p>$\mu\text{P}$ also specifies a separate <strong>output multiplier</strong> for the final embedding-to-logits (or embedding-to-output) projection — the LM head for language modelling, the noise/velocity prediction head for diffusion. That multiplier is $1/m_d$, where $m_d = \rho_d$ is the width-expansion ratio. With $\rho_d = 8$ here, the final output projection gets an extra $\times 1/8$ scaling factor, independently of the per-layer LR/init rules above.</p>
+  <p>$\mu\text{P}$ also specifies a separate <strong>output multiplier</strong> for the final embedding-to-logits (or embedding-to-output) projection — the LM head for language modelling, the noise/velocity prediction head for diffusion. That multiplier is $1/\rho_d$ (the inverse width-expansion ratio). With $\rho_d = 8$ here, the final output projection gets an extra $\times 1/8$ scaling factor, independently of the per-layer LR/init rules above.</p>
 
   <h3>Effective per-parameter values at the large MoE</h3>
   <p>Composing Step 2 (MoE layer rule) with Step 3 ($\mu\text{P}$ width factor) gives the actual per-parameter LR and init std for each parameter group:</p>
@@ -576,7 +864,7 @@ window.MathJax = {
         <tr>
           <td>Final output projection (LM head / DF head)</td>
           <td>$\times 1/8$</td>
-          <td>$\times 1/\sqrt{8}$ &nbsp;<em>and</em> output multiplier $\times 1/m_d = \times 1/8$</td>
+          <td>$\times 1/\sqrt{8}$ &nbsp;<em>and</em> output multiplier $\times 1/\rho_d = \times 1/8$</td>
           <td>$\approx 0.0035$</td>
           <td>$\approx 0.0071$</td>
         </tr>
@@ -584,7 +872,7 @@ window.MathJax = {
     </table>
   </div>
 
-  <p>The final output projection gets <em>both</em> the per-layer $\mu\text{P}$ scaling (Step 3, same as every other 2D linear) <em>and</em> the additional output multiplier $\times 1/m_d$ on its output activations. On top of that, the MoE-specific multipliers from Step 2 apply only to the routed-output branch inside the MoE block: output multiplier $A = 1/9$ on the down-projection output, and route scale $R = 8$ on the normalized routed sum (the shared expert keeps $R = 1$).</p>
+  <p>The final output projection gets <em>both</em> the per-layer $\mu\text{P}$ scaling (Step 3, same as every other 2D linear) <em>and</em> the additional output multiplier $\times 1/\rho_d$ on its output activations. On top of that, the MoE-specific multipliers from Step 2 apply only to the routed-output branch inside the MoE block: output multiplier $A = 1/9$ on the down-projection output, and route scale $R = 8$ on the normalized routed sum (the shared expert keeps $R = 1$).</p>
 
   <p class="audience-note">There is no per-architecture sweep between the small calibration and the large run. Every number in the "Large" column of the setup table is mechanical — it follows from the small-proxy values by applying the two tables in sequence.</p>
 </section>
@@ -642,8 +930,12 @@ window.MathJax = {
       <img src="figures/activated_experts_initial_loss_lm.png" alt="LM initial training-loss curves across activated-expert counts.">
       <img src="figures/activated_experts_initial_loss_df.png" alt="Diffusion initial training-loss curves across activated-expert counts.">
     </div>
-    <figcaption>Activated-experts sweep at fixed total experts and per-expert width, for LM (left column) and diffusion (right column). Rows, top to bottom: <strong>learning rate</strong>, <strong>weight decay</strong>, <strong>initialization std</strong>, and <strong>initial training loss</strong> (first ~100 steps). For all three optimizer hyperparameters the optimal region is broad and relatively stable across $a$, with only the minor drift the theory predicts. The initial-loss panel is the cleanest check of all: the trajectories for different $a$ overlap almost exactly during the first ~100 steps — what you'd expect if Complete-muE is actually preserving the per-step update size across architectures, before the longer-horizon $\sigma_0$ drift starts to matter.</figcaption>
+    <figcaption>Activated-experts sweep at fixed total experts and per-expert width, for LM (left column) and diffusion (right column). Rows, top to bottom: <strong>learning rate</strong>, <strong>weight decay</strong>, <strong>initialization std</strong>, and <strong>initial training loss</strong> (first ~100 steps). For all three optimizer hyperparameters the optimal region is broad and relatively stable across $a$, with only the minor drift the theory predicts. The initial-loss panel is the cleanest check of all: across activated counts, the trajectories for different $a$ stay close during the first ~100 steps — a small spread is normal, but they should track each other tightly — which is what you'd expect if Complete-muE is preserving the per-step update size across architectures, before the longer-horizon $\sigma_0$ drift starts to matter.</figcaption>
   </figure>
+
+  <div class="callout">
+    <p><strong>Practical implementation check.</strong> The <em>initial</em> training-loss curve (first ~100 steps) is the simplest tool to verify a $\mu\text{P}$ / Complete-muE implementation is correct. If the per-layer multipliers, output multiplier $A$, route scale $R$, and down-projection init are all wired up correctly, the initial-loss trajectories of dense and any MoE variant — across different activated counts, total experts, granularity, or backbone width — should <em>stay close</em>. They don't have to lie on top of each other; a small spread is expected from finite-batch noise and ordinary training stochasticity. What matters is the shape of the gap: the curves should track each other tightly with no widening trend. A persistent or growing separation in those first ~100 steps usually means one of the multipliers is off — wrong tensor axis, missing factor, or applied to the wrong projection. We use this as a quick unit test on every new MoE architecture: implement the variant, run ~100 steps at the dense-tuned hyperparameters, and overlay the curve on the dense baseline. If they track, the parameterization is fine; if they diverge clearly, find the bug before scaling up.</p>
+  </div>
 
   <h3>LR optima persist across the other MoE architectural axes</h3>
   <p>Bridge II covered activated experts. The follow-up question is whether the same LR transfer holds for the <em>other</em> MoE architectural knobs — capacity (total experts $N$), fixed-density granularity, shared experts, group-balanced routing, depth, and backbone width. We sweep each axis individually, with Complete-muE applied first and only the base LR scanned. The optima stay aligned across all six axes for both LM and diffusion:</p>
@@ -667,115 +959,6 @@ window.MathJax = {
   </figure>
 
   <p>Combined with the activated-experts sweep above, this covers <em>every</em> MoE architectural axis the paper studies. The takeaway is uniform: once Complete-muE plugs the dense-tuned hyperparameters into the new architecture, the LR optimum stays put. There is no per-axis re-tuning step.</p>
-</section>
-
-<!-- ============== LARGE-SCALE EVIDENCE ============== -->
-<section id="large-scale">
-  <h2>Large-scale evidence</h2>
-
-  <div class="callout">
-    <p>The point of the recipe is the asymmetry: <strong>tuning is done on a small dense proxy, deployment is at large MoE scale.</strong> All sweeps that produced the calibrated hyperparameters were run at proxy backbone width $d_\star = 128$ on short runs (25k–100k steps). The large-scale runs then use Complete-muE to transfer to backbone width $d = 1024$ (8× wider, ~6.3B total MoE parameters with ~0.62B active) — a setting that would be enormously expensive to sweep directly.</p>
-    <p>The hyperparameters used for these large runs are <strong>exactly</strong> what the <a href="#example">worked example</a> above produces. All four multimodal diffusion regimes — $256$P images, $512$P images, $240$P key frames, and $240$P $5$s videos — share the diffusion setting derived there: $\text{LR} = 2.26\!\times\!10^{-3}$, $\text{WD} = 0.01$, base init std $= 0.02$. The LM run uses the LM setting from the same recipe: $\text{LR} = 5\!\times\!10^{-4}$, $\text{WD} = 0.05$, base init std $= 0.01$. The <code>128e8a1s</code> MoE configuration in the benchmark table below is the exact architecture the example walks through. Each MoE configuration is compared to its dense baseline at those same hyperparameters.</p>
-    <p>Every setting delivers consistent MoE-over-dense convergence speedup, with no per-setting retuning:</p>
-    <ul>
-      <li>$\sim\!2.5\times$ on $256$P images</li>
-      <li>$\sim\!4.5\times$ on $240$P $5$s videos</li>
-      <li>$\sim\!5.3\times$–$5.5\times$ on LLM training (100k iterations)</li>
-    </ul>
-    <p>This is the strongest form of empirical evidence the paper offers: <strong>cheap small-dense sweep → expensive large MoE training</strong>, across five very different landscapes, all delivering consistent gains.</p>
-  </div>
-
-  <figure>
-    <div class="img-grid-3x2">
-      <img src="figures/large_loss_256p.png" alt="Large-scale 256P image diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_loss_512p.png" alt="Large-scale 512P image diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_loss_240p_keyframe.png" alt="Large-scale 240P key-frame diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_loss_240p_video.png" alt="Large-scale 240P 5s video diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_speedup_256p.png" alt="Large-scale 256P image convergence speedup, MoE vs. dense.">
-      <img src="figures/large_speedup_240p_video.png" alt="Large-scale 240P 5s video convergence speedup, MoE vs. dense.">
-    </div>
-    <figcaption>Large-scale multimodal diffusion training, dense vs. MoE, at <em>one</em> shared hyperparameter setting (LR = $2.26\!\times\!10^{-3}$, WD = $0.01$, base init std = $0.02$) — the exact configuration the <a href="#example">worked example</a> produces. <strong>Top row — training loss across resolutions and modalities:</strong> $256$P images, $512$P images, $240$P key frames, $240$P $5$s videos. <strong>Bottom row — convergence speedup</strong> (dense steps / MoE steps to reach the same loss during the stable-LR phase of WSD) for the easiest and hardest regimes: $256$P images and $240$P $5$s videos. MoE keeps lower training loss in <em>every</em> resolution and modality, with $\sim\!2.5\times$ speedup at $256$P scaling up to $\sim\!4.5\times$ on $240$P $5$s video. The recipe transfers across genuinely different generation tasks — still image, key frame, video — not just one.</figcaption>
-  </figure>
-
-  <figure>
-    <div class="img-trio">
-      <img src="figures/large_llm_train_loss.png" alt="Large-scale LLM training loss, dense vs. MoE.">
-      <img src="figures/large_llm_val_loss.png" alt="Large-scale LLM validation loss, dense vs. MoE.">
-      <img src="figures/large_llm_speedup.png" alt="Large-scale LLM convergence speedup, MoE vs. dense.">
-    </div>
-    <figcaption>Large-scale LLM training (100k iterations), dense vs. MoE variants <code>128e8a4g1s</code> and <code>128e8a1s</code> at one shared hyperparameter setting (LR = $5\times10^{-4}$, WD = $0.05$). Left: smoothed training loss. Middle: validation loss on C4. Right: convergence speedup vs. dense baseline. The MoE variants reach 5.3–5.5× convergence speedup over dense.</figcaption>
-  </figure>
-
-  <h3>Downstream benchmarks confirm the loss gain</h3>
-  <p>The training-loss advantage translates into downstream-task quality. After the same 100k-step LM training, both MoE variants substantially improve the dense baseline's average across 13 LM benchmarks:</p>
-
-  <div class="table-scroll">
-    <table class="benchmark">
-      <caption>Large-scale dense vs. MoE benchmark evaluation (5-shot, percentages). <strong>Bold</strong> = best per column.</caption>
-      <thead>
-        <tr>
-          <th>Model</th>
-          <th>SVAMP</th>
-          <th>MMLU</th>
-          <th>ARC-Easy</th>
-          <th>ARC-Chall.</th>
-          <th>COPA</th>
-          <th>PIQA</th>
-          <th>HellaSwag</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Dense</td>
-          <td>7.0</td><td>25.4</td><td>64.6</td><td>33.6</td><td>70.0</td><td>72.6</td><td>56.5</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a4g1s</code></td>
-          <td>9.7</td><td>25.9</td><td>71.2</td><td><strong>43.6</strong></td><td>80.0</td><td>77.7</td><td>69.3</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a1s</code></td>
-          <td><strong>10.0</strong></td><td><strong>26.2</strong></td><td><strong>72.9</strong></td><td>43.4</td><td><strong>85.0</strong></td><td><strong>77.8</strong></td><td><strong>69.4</strong></td>
-        </tr>
-      </tbody>
-      <thead>
-        <tr>
-          <th>Model</th>
-          <th>WinoGrande</th>
-          <th>LAMBADA</th>
-          <th>BoolQ</th>
-          <th>AGIEval-RC</th>
-          <th>AGIEval-LR</th>
-          <th>AGIEval-SAT</th>
-          <th>Average</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Dense</td>
-          <td>59.0</td><td>50.5</td><td>62.6</td><td>20.9</td><td><strong>27.3</strong></td><td>26.2</td><td>44.3</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a4g1s</code></td>
-          <td>65.2</td><td>61.9</td><td>63.4</td><td>22.8</td><td>27.1</td><td>20.9</td><td>49.1</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a1s</code></td>
-          <td><strong>66.5</strong></td><td><strong>63.4</strong></td><td><strong>63.9</strong></td><td><strong>27.2</strong></td><td>24.3</td><td><strong>27.2</strong></td><td><strong>50.6</strong></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <p>Average score: <strong>44.3 → 49.1</strong> for the group-balanced variant and <strong>44.3 → 50.6</strong> for the non-grouped variant — a +4.8 to +6.3 point improvement on average, again at the dense-tuned hyperparameters.</p>
-</section>
-
-<!-- ============== COST BONUS ============== -->
-<section id="cost">
-  <h2>Bonus: large MoEs train at near-dense cost</h2>
-  <p>Everything above is about <em>tuning</em> being cheap with Complete-muE. The other half of the practical win is that the <em>training</em> itself — at least along the capacity axis that gave the biggest loss gain in the small-scale evidence — is also cheap. On a single H100 80GB GPU, scaling from $8$ to $256$ total experts (at a fixed $8$ activated) raises step latency only from $87.8$ to $97.0$ ms/step — just $1.08\text{-}1.20\times$ the $81.0$ ms dense SwiGLU baseline. So you can grow MoE parameter count by an order of magnitude while keeping training cost essentially flat.</p>
-  <p>For context, reaching comparable parameter count by widening a dense model instead would push step latency from $81.0$ to $667.6$ ms ($8\times$ slower) before larger sizes simply run out of memory. The same comparison goes for granularity: fine-grained partitioning ($k = 2 \to 64$) raises latency from $84.1$ to $135.0$ ms/step — not free, but still far cheaper than dense width scaling.</p>
-  <p>Bottom line: <strong>large MoEs trained via capacity scaling are nearly free relative to dense, and Complete-muE makes them tunable for free, too</strong>. Both halves of the win compound.</p>
 </section>
 
 <!-- ============== THEORY (insight, bridges, calibration as h3) ============== -->
@@ -878,7 +1061,7 @@ window.MathJax = {
     <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a>,
     <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a>,
     <a href="https://research.adobe.com/person/yan-kang/" target="_blank" rel="noopener">Yan Kang</a>
-    (Adobe Research). Read the preprint on arXiv: <a href="https://arxiv.org/abs/2605.23893" target="_blank" rel="noopener">arXiv:2605.23893</a>.</p>
+    (<span class="adobe-brand">Adobe Research</span>). Read the preprint on arXiv: <a href="https://arxiv.org/abs/2605.23893" target="_blank" rel="noopener">arXiv:2605.23893</a>.</p>
 
   <h3 id="citation">Citation</h3>
   <p>Please cite this work as:</p>
@@ -966,7 +1149,7 @@ window.MathJax = {
 </div><!-- /.layout -->
 
 <footer>
-  <p>Complete-muE blog post · Adobe Research.</p>
+  <p>Complete-muE blog post · <span class="adobe-brand">Adobe Research</span>.</p>
 </footer>
 
 </body>
