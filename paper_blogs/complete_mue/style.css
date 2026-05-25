@@ -19,12 +19,19 @@
   --bg-hood: #ffffff;        /* white "Under the hood" box */
   --bg-code: #f4f4f6;        /* very subtle tint for inline code legibility */
 
-  /* Accent — deep teal (kept as the calm body accent for links/headings) */
-  --accent: #1f5f5b;
-  --accent-soft: #3a8a85;
-  --accent-deep: #134541;
-  --accent-warm: #b67b30;    /* caramel, complementary to teal */
-  --accent-warm-light: #d6a45a;
+  /* Side-accent palette — two colors only, with a fixed meaning:
+       * Color A (deep teal) — PRIMARY: main callouts, recipe blocks, takeaways,
+         menu blocks, citation sidenotes, citation pre-blocks, headings/links.
+       * Color B (warm caramel) — ASIDES: audience-note pointers and
+         definition sidenotes (the "ⓘ" margin notes).
+     Adobe red is reserved for the brand chip in the title/footer only; it is
+     never used as a content-block border. */
+
+  --accent: #1f5f5b;         /* A — primary deep teal */
+  --accent-soft: #3a8a85;    /* A — lighter teal for tints/secondary borders */
+  --accent-deep: #134541;    /* A — darkest teal for hover/strong text */
+  --accent-warm: #b67b30;    /* B — aside-only caramel */
+  --accent-warm-light: #d6a45a; /* B — lighter aside tone (legacy) */
 
   /* Adobe brand red — used sparingly: byline, key brand chips */
   --adobe-red: #ED2224;
@@ -94,10 +101,24 @@ a:hover {
   margin: 0;
   font-family: var(--sans);
   font-size: 0.8rem;
-  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
+}
+
+.post-heading .eyebrow .eyebrow-brand {
+  font-weight: 700;
   color: var(--adobe-red);
+}
+
+.post-heading .eyebrow .eyebrow-sep {
+  margin: 0 0.5em;
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+
+.post-heading .eyebrow .eyebrow-sub {
+  font-weight: 400;
+  color: var(--fg-muted);
 }
 
 .post-heading .post-title {
@@ -585,7 +606,7 @@ pre.bibtex::-webkit-scrollbar-thumb {
 
 .callout.headline {
   background: var(--bg-callout-headline);
-  border-left: 4px solid var(--adobe-red);
+  border-left: 4px solid var(--accent);
   font-size: 1.04rem;
 }
 

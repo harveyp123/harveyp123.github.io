@@ -33,7 +33,7 @@ window.MathJax = {
 <body>
 
 <header class="post-heading">
-  <p class="eyebrow">Adobe Research · Blog Post</p>
+  <p class="eyebrow"><span class="eyebrow-brand">Adobe Research</span><span class="eyebrow-sep">·</span><span class="eyebrow-sub">Blog Post</span></p>
   <h1 class="post-title">Complete-muE</h1>
   <p class="post-subtitle"><em>Optimal Hyperparameter Transfer and Scaling for MoE Models</em></p>
   <div class="publish-metadata">
@@ -255,9 +255,9 @@ window.MathJax = {
   <nav class="toc">
     <ol>
       <li><a href="#tldr">TL;DR</a></li>
+      <li><a href="#qualitative">See it first: dense vs. MoE samples</a></li>
       <li><a href="#problem">Why MoE tuning is so painful</a></li>
-      <li><a href="#large-scale">Large-scale evidence</a></li>
-      <li><a href="#qualitative">Qualitative dense-vs-MoE samples</a></li>
+      <li><a href="#large-scale">Large-scale evidence (numbers)</a></li>
       <li><a href="#cost">Bonus: MoEs train at near-dense cost</a></li>
       <li><a href="#recipe">The recipe in three steps</a></li>
       <li><a href="#tuning-menu">Tuning menu at a glance</a></li>
@@ -284,7 +284,7 @@ window.MathJax = {
     <p>The whole point is the asymmetry: <strong>small dense sweep, large MoE deployment</strong>. Our large-scale runs tune at proxy width $d_\star = 128$ and deploy at $d = 1024$ ($8\times$ wider). At that scale the recipe gives <strong>$\sim\!4.5\times$ convergence speedup</strong> for $240$P $5$s video diffusion, <strong>$\sim\!2.5\times$</strong> for $256$P image diffusion, and <strong>$\sim\!5.3\text{-}5.5\times$</strong> for LLM training, all versus a dense baseline at the <em>same</em> hyperparameters.</p>
   </div>
   <p class="audience-note">
-    👤 <strong>If you're new to MoE</strong>, start with <a href="#problem">why MoE tuning is so painful</a>, then read the rest top-to-bottom.
+    👤 <strong>If you're new to MoE</strong>, watch the <a href="#qualitative">video pairs</a> first, then read <a href="#problem">why MoE tuning is so painful</a> and continue top-to-bottom.
     <br>
     🛠️ <strong>If you train models for a living</strong>, jump straight to <a href="#recipe">the recipe</a> and the <a href="#example">worked example</a>.
     <br>
@@ -292,151 +292,11 @@ window.MathJax = {
   </p>
 </section>
 
-<!-- ============== PROBLEM ============== -->
-<section id="problem">
-  <h2>Why MoE tuning is so painful</h2>
-  <p>A modern Mixture-of-Experts transformer block has many knobs you can turn:</p>
-  <ul>
-    <li>How wide each expert is ($h$)</li>
-    <li>How many experts the router activates per token ($a$, "activated experts")</li>
-    <li>How many experts exist in total ($N$, "capacity")</li>
-    <li>Granularity (more, smaller experts vs. fewer, larger ones)</li>
-    <li>Shared experts that always fire</li>
-    <li>Group-balanced routing</li>
-    <li>...all on top of the usual width, depth, batch size, and training duration</li>
-  </ul>
-
-  <p>The catch: each of these choices changes <em>two</em> things at once.</p>
-
-  <div class="two-col">
-    <div>
-      <h3>1. The architecture changes</h3>
-      <p>Replacing a dense FFN with an MoE block, or making the experts smaller, alters the parameterized network. Signals propagate differently. Per-step update sizes shift.</p>
-    </div>
-    <div>
-      <h3>2. The data each expert sees changes</h3>
-      <p>An expert only trains on tokens that the router sends to it. With $a$ activated experts out of $N$, each expert sees roughly $a/N$ of the tokens. Change $a$ or $N$ and you've changed each expert's effective batch size and total training duration.</p>
-    </div>
-  </div>
-
-  <p>This double-change — shifting update sizes<aside class="sidenote def"><em>Update size</em> ≈ the typical change in a parameter per training step, roughly $\eta \cdot \nabla\ell$. $\mu\text{P}$-style transfer is built on the requirement that each layer's per-step update size stays the same as the architecture is rescaled; if it shifts, the same learning rate produces a different effective trajectory.</aside> on one side, shifting per-expert workload on the other — is exactly what existing transfer rules<aside class="sidenote def">A <em>transfer rule</em> is a deterministic recipe for how the optimal hyperparameters scale when you change one architectural axis — e.g., $\mu\text{P}$ says scale the down-projection initialization by $\sqrt{H/d}$ when you widen the FFN. The goal of a transfer rule is to avoid re-sweeping at every new model size.</aside> <em>cannot</em> handle:</p>
-
-  <ul>
-    <li><strong>$\mu\text{P}$</strong><sup class="cite-mark">1</sup><aside class="sidenote"><span class="sn-num">1</span> Yang et al. (2022). <em>Tensor Programs V.</em> <a href="https://arxiv.org/abs/2203.03466" target="_blank" rel="noopener">arXiv:2203.03466</a></aside> handles changes to a fixed parameterized model very well — it gives you zero-shot width transfer. Subsequent work extends it to depth, practical training, and diffusion transformers<sup class="cite-mark">2,3,10</sup><aside class="sidenote"><span class="sn-num">2</span> Dey et al. (2025). <em>Don't be lazy: CompleteP.</em> <a href="https://arxiv.org/abs/2505.01618" target="_blank" rel="noopener">arXiv:2505.01618</a></aside><aside class="sidenote"><span class="sn-num">3</span> Mlodozeniec et al. (2025). <em>Completed Hyperparameter Transfer (Complete(d)P).</em> <a href="https://arxiv.org/abs/2512.22382" target="_blank" rel="noopener">arXiv:2512.22382</a></aside><aside class="sidenote"><span class="sn-num">10</span> Zheng et al. (2025). <em>Scaling Diffusion Transformers via $\mu\text{P}$.</em> <a href="https://arxiv.org/abs/2505.15270" target="_blank" rel="noopener">arXiv:2505.15270</a></aside>. But plain $\mu\text{P}$ has no slot for the per-expert workload.</li>
-    <li><strong>SDE-based batch/duration rules</strong><sup class="cite-mark">4</sup><aside class="sidenote"><span class="sn-num">4</span> Malladi et al. (2022). <em>SDEs and scaling rules for adaptive gradient algorithms.</em> <a href="https://arxiv.org/abs/2205.10287" target="_blank" rel="noopener">arXiv:2205.10287</a></aside> handle changes in tokens-per-step for a <em>fixed</em> architecture. They don't apply when the architecture itself changes.</li>
-    <li>Recent <strong>MoE-specific transfer studies</strong><sup class="cite-mark">5,6</sup><aside class="sidenote"><span class="sn-num">5</span> Małaśnicki et al. (2025). <em>$\mu$-Parametrization for Mixture of Experts.</em> <a href="https://arxiv.org/abs/2506.16962" target="_blank" rel="noopener">arXiv:2506.16962</a></aside><aside class="sidenote"><span class="sn-num">6</span> Jiang et al. (2026). <em>Hyperparameter Transfer with MoE Layers.</em></aside> preserve learning-rate ranges under expert-count sweeps but stop short of one compositional rule for the full MoE design space.</li>
-  </ul>
-
-  <p>So when you go from dense FFN to MoE, or change the MoE capacity, neither tool alone tells you what learning rate to use. Practitioners end up doing what they always did — another full hyperparameter sweep at the new architecture — and that gets expensive fast.</p>
-</section>
-
-<!-- ============== LARGE-SCALE EVIDENCE (relocated to the top — payoff first) ============== -->
-<section id="large-scale">
-  <h2>Large-scale evidence: what the recipe buys you</h2>
-
-  <div class="callout">
-    <p>The point of the recipe is the asymmetry: <strong>tuning is done on a small dense proxy, deployment is at large MoE scale.</strong> All sweeps that produce the calibrated hyperparameters run at proxy backbone width $d_\star = 128$ on short runs (25k–100k steps). The large-scale runs below then use Complete-muE to transfer to backbone width $d = 1024$ ($8\times$ wider, $\sim$6.3B total MoE parameters with $\sim$0.62B active) — a setting that would be enormously expensive to sweep directly. The <a href="#recipe">recipe</a> and <a href="#example">worked example</a> in the next sections show exactly how the small-proxy values flow into these large runs; the rest of this section is what comes out.</p>
-    <p>All four multimodal diffusion regimes — $256$P images, $512$P images, $240$P key frames, and $240$P $5$s videos — share the diffusion setting derived from the recipe: $\text{LR} = 2.26\!\times\!10^{-3}$, $\text{WD} = 0.01$, base init std $= 0.02$. The LM run uses the LM setting from the same recipe: $\text{LR} = 5\!\times\!10^{-4}$, $\text{WD} = 0.05$, base init std $= 0.01$. The <code>128e8a1s</code> MoE configuration in the benchmark table below is the exact architecture the <a href="#example">worked example</a> walks through end-to-end. Each MoE configuration is compared to its dense baseline at those same hyperparameters.</p>
-    <p>Every setting delivers consistent MoE-over-dense convergence speedup, with no per-setting retuning:</p>
-    <ul>
-      <li>$\sim\!2.5\times$ on $256$P images</li>
-      <li>$\sim\!4.5\times$ on $240$P $5$s videos</li>
-      <li>$\sim\!5.3\times$–$5.5\times$ on LLM training (100k iterations)</li>
-    </ul>
-    <p>This is the strongest form of empirical evidence the paper offers: <strong>cheap small-dense sweep → expensive large MoE training</strong>, across five very different landscapes, all delivering consistent gains.</p>
-  </div>
-
-  <figure>
-    <div class="img-grid-3x2">
-      <img src="figures/large_loss_256p.png" alt="Large-scale 256P image diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_loss_512p.png" alt="Large-scale 512P image diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_loss_240p_keyframe.png" alt="Large-scale 240P key-frame diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_loss_240p_video.png" alt="Large-scale 240P 5s video diffusion training loss, dense vs. MoE.">
-      <img src="figures/large_speedup_256p.png" alt="Large-scale 256P image convergence speedup, MoE vs. dense.">
-      <img src="figures/large_speedup_240p_video.png" alt="Large-scale 240P 5s video convergence speedup, MoE vs. dense.">
-    </div>
-    <figcaption>Large-scale multimodal diffusion training, dense vs. MoE, at <em>one</em> shared hyperparameter setting (LR = $2.26\!\times\!10^{-3}$, WD = $0.01$, base init std = $0.02$) — the exact configuration the <a href="#example">worked example</a> derives below. <strong>Top row — training loss across resolutions and modalities:</strong> $256$P images, $512$P images, $240$P key frames, $240$P $5$s videos. <strong>Bottom row — convergence speedup</strong> (dense steps / MoE steps to reach the same loss during the stable-LR phase of WSD) for the easiest and hardest regimes: $256$P images and $240$P $5$s videos. MoE keeps lower training loss in <em>every</em> resolution and modality, with $\sim\!2.5\times$ speedup at $256$P scaling up to $\sim\!4.5\times$ on $240$P $5$s video. The recipe transfers across genuinely different generation tasks — still image, key frame, video — not just one.</figcaption>
-  </figure>
-
-  <figure>
-    <div class="img-trio">
-      <img src="figures/large_llm_train_loss.png" alt="Large-scale LLM training loss, dense vs. MoE.">
-      <img src="figures/large_llm_val_loss.png" alt="Large-scale LLM validation loss, dense vs. MoE.">
-      <img src="figures/large_llm_speedup.png" alt="Large-scale LLM convergence speedup, MoE vs. dense.">
-    </div>
-    <figcaption>Large-scale LLM training (100k iterations), dense vs. MoE variants <code>128e8a4g1s</code> and <code>128e8a1s</code> at one shared hyperparameter setting (LR = $5\times10^{-4}$, WD = $0.05$). Left: smoothed training loss. Middle: validation loss on C4. Right: convergence speedup vs. dense baseline. The MoE variants reach 5.3–5.5× convergence speedup over dense.</figcaption>
-  </figure>
-
-  <p>One additional observation from these large-scale runs deserves attention: pretraining with Complete-muE is <strong>remarkably stable</strong>. Across both the diffusion and LLM settings, training-loss and gradient-norm traces remain smooth throughout the entire run — virtually free of spikes. A well-calibrated hyperparameter setting does not just improve final loss; it also keeps the optimizer in a well-behaved regime where per-step updates are neither too aggressive nor too conservative, avoiding the erratic dynamics that can otherwise force costly mid-run interventions or restarts at large MoE scale.</p>
-
-  <h3>Downstream benchmarks confirm the loss gain</h3>
-  <p>The training-loss advantage translates into downstream-task quality. After the same 100k-step LM training, both MoE variants substantially improve the dense baseline's average across 13 LM benchmarks:</p>
-
-  <div class="table-scroll">
-    <table class="benchmark">
-      <caption>Large-scale dense vs. MoE benchmark evaluation (5-shot, percentages). <strong>Bold</strong> = best per column.</caption>
-      <thead>
-        <tr>
-          <th>Model</th>
-          <th>SVAMP</th>
-          <th>MMLU</th>
-          <th>ARC-Easy</th>
-          <th>ARC-Chall.</th>
-          <th>COPA</th>
-          <th>PIQA</th>
-          <th>HellaSwag</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Dense</td>
-          <td>7.0</td><td>25.4</td><td>64.6</td><td>33.6</td><td>70.0</td><td>72.6</td><td>56.5</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a4g1s</code></td>
-          <td>9.7</td><td>25.9</td><td>71.2</td><td><strong>43.6</strong></td><td>80.0</td><td>77.7</td><td>69.3</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a1s</code></td>
-          <td><strong>10.0</strong></td><td><strong>26.2</strong></td><td><strong>72.9</strong></td><td>43.4</td><td><strong>85.0</strong></td><td><strong>77.8</strong></td><td><strong>69.4</strong></td>
-        </tr>
-      </tbody>
-      <thead>
-        <tr>
-          <th>Model</th>
-          <th>WinoGrande</th>
-          <th>LAMBADA</th>
-          <th>BoolQ</th>
-          <th>AGIEval-RC</th>
-          <th>AGIEval-LR</th>
-          <th>AGIEval-SAT</th>
-          <th>Average</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Dense</td>
-          <td>59.0</td><td>50.5</td><td>62.6</td><td>20.9</td><td><strong>27.3</strong></td><td>26.2</td><td>44.3</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a4g1s</code></td>
-          <td>65.2</td><td>61.9</td><td>63.4</td><td>22.8</td><td>27.1</td><td>20.9</td><td>49.1</td>
-        </tr>
-        <tr>
-          <td>MoE <code>128e8a1s</code></td>
-          <td><strong>66.5</strong></td><td><strong>63.4</strong></td><td><strong>63.9</strong></td><td><strong>27.2</strong></td><td>24.3</td><td><strong>27.2</strong></td><td><strong>50.6</strong></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <p>Average score: <strong>44.3 → 49.1</strong> for the group-balanced variant and <strong>44.3 → 50.6</strong> for the non-grouped variant — a +4.8 to +6.3 point improvement on average, again at the dense-tuned hyperparameters.</p>
-</section>
-
-<!-- ============== QUALITATIVE VIDEO COMPARISON ============== -->
+<!-- ============== QUALITATIVE VIDEO COMPARISON (lead with samples — eye-catching) ============== -->
 <section id="qualitative">
-  <h2>Qualitative samples: dense vs. MoE at identical training cost</h2>
-  <p>Loss curves and benchmark numbers show the recipe transfers numerically. The pairs below show what that looks like at the sample level: same text prompt, same training compute and hyperparameters, dense baseline on the left, MoE <code>128e8a1s</code> on the right. Both models share the diffusion setting derived from one small-dense calibration sweep — there is no per-architecture tuning between them.</p>
+  <h2>See it first: dense vs. MoE samples at identical training cost</h2>
+  <p>Skip the math for a moment. The eight pairs below run on the <em>same</em> text prompts at <em>identical</em> training compute — dense baseline on the left, MoE <code>128e8a1s</code> on the right. Both models share one hyperparameter setting derived from a single small-dense calibration sweep; <strong>there is no per-architecture sweep between them</strong>. The MoE side tracks the prompts more faithfully (motion, composition, fidelity) at no extra training budget.</p>
+  <p>If your reaction after watching is <em>"how would you ever find good MoE hyperparameters without sweeping at this scale?"</em> — that's exactly the question this post answers. <a href="#problem">The next section names the pain</a>; <a href="#large-scale">the one after that</a> shows the numerical proof that the recipe avoids it.</p>
 
   <figure class="video-figure">
     <div class="video-pair-block">
@@ -601,6 +461,151 @@ window.MathJax = {
 
     <figcaption>Side-by-side $240$P $5$s video samples, dense vs. MoE <code>128e8a1s</code>, at matched training compute and a single set of dense-tuned hyperparameters. Prompts span human portrait, wide landscape, fast-moving subject, abstract cosmic, mythic creatures, photoreal close-up, surreal narrative, and static interior — chosen to stress different aspects of motion, lighting, and composition.</figcaption>
   </figure>
+</section>
+
+<!-- ============== PROBLEM (now positioned after the video to motivate the recipe) ============== -->
+<section id="problem">
+  <h2>Why MoE tuning is so painful</h2>
+  <p>The MoE samples above look like a free lunch from the outside, but the standard path to them is anything but. A modern Mixture-of-Experts transformer block has many knobs you can turn:</p>
+  <ul>
+    <li>How wide each expert is ($h$)</li>
+    <li>How many experts the router activates per token ($a$, "activated experts")</li>
+    <li>How many experts exist in total ($N$, "capacity")</li>
+    <li>Granularity (more, smaller experts vs. fewer, larger ones)</li>
+    <li>Shared experts that always fire</li>
+    <li>Group-balanced routing</li>
+    <li>...all on top of the usual width, depth, batch size, and training duration</li>
+  </ul>
+
+  <p>The catch: each of these choices changes <em>two</em> things at once.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>1. The architecture changes</h3>
+      <p>Replacing a dense FFN with an MoE block, or making the experts smaller, alters the parameterized network. Signals propagate differently. Per-step update sizes shift.</p>
+    </div>
+    <div>
+      <h3>2. The data each expert sees changes</h3>
+      <p>An expert only trains on tokens that the router sends to it. With $a$ activated experts out of $N$, each expert sees roughly $a/N$ of the tokens. Change $a$ or $N$ and you've changed each expert's effective batch size and total training duration.</p>
+    </div>
+  </div>
+
+  <p>This double-change — shifting update sizes<aside class="sidenote def"><em>Update size</em> ≈ the typical change in a parameter per training step, roughly $\eta \cdot \nabla\ell$. $\mu\text{P}$-style transfer is built on the requirement that each layer's per-step update size stays the same as the architecture is rescaled; if it shifts, the same learning rate produces a different effective trajectory.</aside> on one side, shifting per-expert workload on the other — is exactly what existing transfer rules<aside class="sidenote def">A <em>transfer rule</em> is a deterministic recipe for how the optimal hyperparameters scale when you change one architectural axis — e.g., $\mu\text{P}$ says scale the down-projection initialization by $\sqrt{H/d}$ when you widen the FFN. The goal of a transfer rule is to avoid re-sweeping at every new model size.</aside> <em>cannot</em> handle:</p>
+
+  <ul>
+    <li><strong>$\mu\text{P}$</strong><sup class="cite-mark">1</sup><aside class="sidenote"><span class="sn-num">1</span> Yang et al. (2022). <em>Tensor Programs V.</em> <a href="https://arxiv.org/abs/2203.03466" target="_blank" rel="noopener">arXiv:2203.03466</a></aside> handles changes to a fixed parameterized model very well — it gives you zero-shot width transfer. Subsequent work extends it to depth, practical training, and diffusion transformers<sup class="cite-mark">2,3,10</sup><aside class="sidenote"><span class="sn-num">2</span> Dey et al. (2025). <em>Don't be lazy: CompleteP.</em> <a href="https://arxiv.org/abs/2505.01618" target="_blank" rel="noopener">arXiv:2505.01618</a></aside><aside class="sidenote"><span class="sn-num">3</span> Mlodozeniec et al. (2025). <em>Completed Hyperparameter Transfer (Complete(d)P).</em> <a href="https://arxiv.org/abs/2512.22382" target="_blank" rel="noopener">arXiv:2512.22382</a></aside><aside class="sidenote"><span class="sn-num">10</span> Zheng et al. (2025). <em>Scaling Diffusion Transformers via $\mu\text{P}$.</em> <a href="https://arxiv.org/abs/2505.15270" target="_blank" rel="noopener">arXiv:2505.15270</a></aside>. But plain $\mu\text{P}$ has no slot for the per-expert workload.</li>
+    <li><strong>SDE-based batch/duration rules</strong><sup class="cite-mark">4</sup><aside class="sidenote"><span class="sn-num">4</span> Malladi et al. (2022). <em>SDEs and scaling rules for adaptive gradient algorithms.</em> <a href="https://arxiv.org/abs/2205.10287" target="_blank" rel="noopener">arXiv:2205.10287</a></aside> handle changes in tokens-per-step for a <em>fixed</em> architecture. They don't apply when the architecture itself changes.</li>
+    <li>Recent <strong>MoE-specific transfer studies</strong><sup class="cite-mark">5,6</sup><aside class="sidenote"><span class="sn-num">5</span> Małaśnicki et al. (2025). <em>$\mu$-Parametrization for Mixture of Experts.</em> <a href="https://arxiv.org/abs/2506.16962" target="_blank" rel="noopener">arXiv:2506.16962</a></aside><aside class="sidenote"><span class="sn-num">6</span> Jiang et al. (2026). <em>Hyperparameter Transfer with MoE Layers.</em></aside> preserve learning-rate ranges under expert-count sweeps but stop short of one compositional rule for the full MoE design space.</li>
+  </ul>
+
+  <p>So when you go from dense FFN to MoE, or change the MoE capacity, neither tool alone tells you what learning rate to use. Practitioners end up doing what they always did — another full hyperparameter sweep at the new architecture — and that gets expensive fast. <strong>Complete-muE is the compositional rule that closes the gap</strong> — and the next section is the numerical proof.</p>
+</section>
+
+<!-- ============== LARGE-SCALE EVIDENCE (restructured: LM benchmarks first, then training curves) ============== -->
+<section id="large-scale">
+  <h2>Large-scale evidence: the numbers behind the samples</h2>
+
+  <p>The samples track what the metrics say. At large scale we trained dense and MoE side by side on both LLM and multi-modal diffusion, all at one hyperparameter setting that came out of a single small-dense calibration sweep. We lead with the LM benchmark numbers — they are the most directly interpretable form of "the recipe worked" — then drop into the underlying training curves and convergence speedups that produced them.</p>
+
+  <h3>Downstream LLM benchmarks: +4.8 to +6.3 points on average, zero retuning</h3>
+  <p>After 100k steps of LM pretraining at the dense-tuned hyperparameters ($\text{LR} = 5\!\times\!10^{-4}$, $\text{WD} = 0.05$, base init std $= 10^{-2}$), both MoE variants substantially improve the dense baseline's average across 13 standard 5-shot benchmarks:</p>
+
+  <div class="table-scroll">
+    <table class="benchmark">
+      <caption>Large-scale dense vs. MoE benchmark evaluation (5-shot, percentages). <strong>Bold</strong> = best per column.</caption>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>SVAMP</th>
+          <th>MMLU</th>
+          <th>ARC-Easy</th>
+          <th>ARC-Chall.</th>
+          <th>COPA</th>
+          <th>PIQA</th>
+          <th>HellaSwag</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dense</td>
+          <td>7.0</td><td>25.4</td><td>64.6</td><td>33.6</td><td>70.0</td><td>72.6</td><td>56.5</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a4g1s</code></td>
+          <td>9.7</td><td>25.9</td><td>71.2</td><td><strong>43.6</strong></td><td>80.0</td><td>77.7</td><td>69.3</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a1s</code></td>
+          <td><strong>10.0</strong></td><td><strong>26.2</strong></td><td><strong>72.9</strong></td><td>43.4</td><td><strong>85.0</strong></td><td><strong>77.8</strong></td><td><strong>69.4</strong></td>
+        </tr>
+      </tbody>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>WinoGrande</th>
+          <th>LAMBADA</th>
+          <th>BoolQ</th>
+          <th>AGIEval-RC</th>
+          <th>AGIEval-LR</th>
+          <th>AGIEval-SAT</th>
+          <th>Average</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dense</td>
+          <td>59.0</td><td>50.5</td><td>62.6</td><td>20.9</td><td><strong>27.3</strong></td><td>26.2</td><td>44.3</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a4g1s</code></td>
+          <td>65.2</td><td>61.9</td><td>63.4</td><td>22.8</td><td>27.1</td><td>20.9</td><td>49.1</td>
+        </tr>
+        <tr>
+          <td>MoE <code>128e8a1s</code></td>
+          <td><strong>66.5</strong></td><td><strong>63.4</strong></td><td><strong>63.9</strong></td><td><strong>27.2</strong></td><td>24.3</td><td><strong>27.2</strong></td><td><strong>50.6</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Average score: <strong>44.3 → 49.1</strong> for the group-balanced variant and <strong>44.3 → 50.6</strong> for the non-grouped variant — a +4.8 to +6.3 point improvement, at the dense-tuned hyperparameters, with no MoE-specific sweep. Same compute, same optimizer state, just a different architecture wired up with Complete-muE's deterministic rule.</p>
+
+  <h3>Training-loss curves and convergence speedup across modalities</h3>
+
+  <div class="callout">
+    <p>The benchmark gain isn't a one-off: the same pattern appears across every modality we tested. The key asymmetry is <strong>tuning on a small dense proxy, deploying at large MoE scale.</strong> The calibrated hyperparameters come from short ($25$k–$100$k step) runs at proxy backbone width $d_\star = 128$. The large runs below then use Complete-muE to transfer to backbone width $d = 1024$ ($8\times$ wider, $\sim$6.3B total MoE parameters with $\sim$0.62B active) — a setting that would be prohibitive to sweep directly. The <a href="#recipe">recipe</a> and <a href="#example">worked example</a> further down show exactly how the small-proxy values flow into these large runs.</p>
+    <p>All four multimodal diffusion regimes — $256$P images, $512$P images, $240$P key frames, $240$P $5$s videos — share the diffusion setting from the recipe ($\text{LR} = 2.26\!\times\!10^{-3}$, $\text{WD} = 0.01$, base init std $= 0.02$). The LM run uses the LM setting from the same recipe. The <code>128e8a1s</code> MoE configuration is the architecture the <a href="#example">worked example</a> walks through end-to-end. Each MoE configuration is compared to its dense baseline at those same hyperparameters.</p>
+    <p>Every setting delivers consistent MoE-over-dense convergence speedup, with no per-setting retuning:</p>
+    <ul>
+      <li>$\sim\!2.5\times$ on $256$P images</li>
+      <li>$\sim\!4.5\times$ on $240$P $5$s videos</li>
+      <li>$\sim\!5.3\times$–$5.5\times$ on LLM training (100k iterations)</li>
+    </ul>
+    <p>This is the strongest form of empirical evidence the paper offers: <strong>cheap small-dense sweep → expensive large MoE training</strong>, across five very different landscapes, all delivering consistent gains.</p>
+  </div>
+
+  <figure>
+    <div class="img-grid-3x2">
+      <img src="figures/large_loss_256p.png" alt="Large-scale 256P image diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_512p.png" alt="Large-scale 512P image diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_240p_keyframe.png" alt="Large-scale 240P key-frame diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_loss_240p_video.png" alt="Large-scale 240P 5s video diffusion training loss, dense vs. MoE.">
+      <img src="figures/large_speedup_256p.png" alt="Large-scale 256P image convergence speedup, MoE vs. dense.">
+      <img src="figures/large_speedup_240p_video.png" alt="Large-scale 240P 5s video convergence speedup, MoE vs. dense.">
+    </div>
+    <figcaption>Large-scale multimodal diffusion training, dense vs. MoE, at <em>one</em> shared hyperparameter setting (LR = $2.26\!\times\!10^{-3}$, WD = $0.01$, base init std = $0.02$) — the exact configuration the <a href="#example">worked example</a> derives below. <strong>Top row — training loss across resolutions and modalities:</strong> $256$P images, $512$P images, $240$P key frames, $240$P $5$s videos. <strong>Bottom row — convergence speedup</strong> (dense steps / MoE steps to reach the same loss during the stable-LR phase of WSD) for the easiest and hardest regimes: $256$P images and $240$P $5$s videos. MoE keeps lower training loss in <em>every</em> resolution and modality, with $\sim\!2.5\times$ speedup at $256$P scaling up to $\sim\!4.5\times$ on $240$P $5$s video. The recipe transfers across genuinely different generation tasks — still image, key frame, video — not just one.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="img-trio">
+      <img src="figures/large_llm_train_loss.png" alt="Large-scale LLM training loss, dense vs. MoE.">
+      <img src="figures/large_llm_val_loss.png" alt="Large-scale LLM validation loss, dense vs. MoE.">
+      <img src="figures/large_llm_speedup.png" alt="Large-scale LLM convergence speedup, MoE vs. dense.">
+    </div>
+    <figcaption>Large-scale LLM training (100k iterations), dense vs. MoE variants <code>128e8a4g1s</code> and <code>128e8a1s</code> at one shared hyperparameter setting (LR = $5\times10^{-4}$, WD = $0.05$). Left: smoothed training loss. Middle: validation loss on C4. Right: convergence speedup vs. dense baseline. The MoE variants reach 5.3–5.5× convergence speedup over dense — the training-side counterpart to the +4.8 to +6.3 point benchmark gain in the table above.</figcaption>
+  </figure>
+
+  <p>One last observation about these runs: pretraining with Complete-muE is <strong>remarkably stable</strong>. Across both the diffusion and LLM settings, training-loss and gradient-norm traces stay smooth for the entire run — essentially free of spikes. A well-calibrated hyperparameter setting does more than improve final loss; it keeps the optimizer in a well-behaved regime where per-step updates are neither too aggressive nor too conservative, avoiding the erratic dynamics that otherwise force costly mid-run interventions or restarts at large MoE scale.</p>
 </section>
 
 <!-- ============== COST BONUS (relocated; part of the up-front "what it buys you" cluster) ============== -->
