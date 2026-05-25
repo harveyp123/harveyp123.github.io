@@ -36,6 +36,7 @@ window.MathJax = {
   <p class="eyebrow"><span class="eyebrow-brand">Adobe Research</span><span class="eyebrow-sep">·</span><span class="eyebrow-sub">Blog Post</span></p>
   <h1 class="post-title">Complete-muE</h1>
   <p class="post-subtitle"><em>Optimal Hyperparameter Transfer and Scaling for MoE Models</em></p>
+  <p class="post-pullquote">&ldquo;Scale the MoE, Reuse the Sweep&rdquo;</p>
   <div class="publish-metadata">
     <p class="authors">
       <a href="https://harveyp123.github.io/" target="_blank" rel="noopener">Hongwu Peng</a>
@@ -246,7 +247,7 @@ window.MathJax = {
   <figcaption>Complete-muE composes two bridges: dense FFN ↔ Dense MoE via active-width µP (Bridge I), and Dense MoE ↔ sparse MoE via expert-side SDE (Bridge II). Every other MoE setting — capacity, granularity, hybrids — is a composition of these two.</figcaption>
 </figure>
 
-<p class="post-subtitle-tagline">Tune one <em>small</em> dense baseline. Transfer to <em>any</em> large Mixture-of-Experts configuration.</p>
+<p class="post-subtitle-tagline">Demystifying optimal MoE parameterization across <em>LLM</em> and <em>diffusion for image and video generation</em>: Tune one <em>small</em> dense baseline. Transfer to <em>any</em> large MoE configuration.</p>
 
 <div class="layout">
 
@@ -295,7 +296,7 @@ window.MathJax = {
 <!-- ============== QUALITATIVE VIDEO COMPARISON (lead with samples — eye-catching) ============== -->
 <section id="qualitative">
   <h2>See it first: dense vs. MoE samples at identical training cost</h2>
-  <p>Skip the math for a moment. The eight pairs below run on the <em>same</em> text prompts at <em>identical</em> training compute — dense baseline on the left, MoE <code>128e8a1s</code> on the right. Both models share one hyperparameter setting derived from a single small-dense calibration sweep; <strong>there is no per-architecture sweep between them</strong>. The MoE side tracks the prompts more faithfully (motion, composition, fidelity) at no extra training budget.</p>
+  <p>Skip the math for a moment. The eight pairs below run on the <em>same</em> text prompts at <em>identical</em> training compute — <strong>dense baseline</strong> ($\sim$0.62B non-embedding parameters) on the left, <strong>MoE <code>128e8a1s</code></strong> ($\sim$6.3B total, $\sim$0.62B active per token) on the right. The two models are matched in <em>per-token</em> compute — the MoE simply expands total capacity through sparse experts without raising the per-token cost. Both share one hyperparameter setting derived from a single small-dense calibration sweep; <strong>there is no per-architecture sweep between them</strong>. The MoE side tracks the prompts more faithfully (motion, composition, fidelity) at no extra training budget.</p>
   <p>If your reaction after watching is <em>"how would you ever find good MoE hyperparameters without sweeping at this scale?"</em> — that's exactly the question this post answers. <a href="#problem">The next section names the pain</a>; <a href="#large-scale">the one after that</a> shows the numerical proof that the recipe avoids it.</p>
 
   <figure class="video-figure">
@@ -1068,7 +1069,7 @@ window.MathJax = {
     <a href="https://yifanfanfanfan.github.io/" target="_blank" rel="noopener">Yifan Gong</a>,
     <a href="https://jimmie33.github.io/" target="_blank" rel="noopener">Jianming Zhang</a>,
     <a href="https://research.adobe.com/person/yan-kang/" target="_blank" rel="noopener">Yan Kang</a>
-    (<span class="adobe-brand">Adobe Research</span>). Read the preprint on arXiv: <a href="https://arxiv.org/abs/2605.23893" target="_blank" rel="noopener">arXiv:2605.23893</a>.</p>
+    (<span class="adobe-brand" style="font-weight: 400">Adobe Research</span>). Read the preprint on arXiv: <a href="https://arxiv.org/abs/2605.23893" target="_blank" rel="noopener">arXiv:2605.23893</a>.</p>
 
   <h3 id="citation">Citation</h3>
   <p>Please cite this work as:</p>

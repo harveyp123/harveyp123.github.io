@@ -144,6 +144,21 @@ a:hover {
   font-style: italic;
 }
 
+/* Blog-spin pull-quote — sits between the formal paper subtitle and the
+   authors block. Italic, slightly larger than the formal subtitle, teal-deep
+   so it reads as a quoted aphorism rather than an alternate subtitle. */
+.post-heading .post-pullquote {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
+  color: var(--accent-deep);
+  text-align: center;
+  margin: 0.3rem 0 1.3rem;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
 .publish-metadata {
   font-family: var(--sans);
   color: var(--fg-muted);
@@ -172,16 +187,18 @@ a:hover {
 .publish-metadata .affil {
   margin: 0;
   font-size: 0.9rem;
-  font-style: italic;
+  font-style: normal;
   color: var(--adobe-red);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Adobe Research brand chip — used in body / footer where the affiliation
    is named again. */
 .adobe-brand {
+  font-family: var(--sans);
   color: var(--adobe-red);
-  font-weight: 600;
+  font-weight: 700;
+  font-style: normal;
 }
 
 /* Tagline below the cover figure */
