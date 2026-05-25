@@ -367,6 +367,8 @@ window.MathJax = {
     <figcaption>Large-scale LLM training (100k iterations), dense vs. MoE variants <code>128e8a4g1s</code> and <code>128e8a1s</code> at one shared hyperparameter setting (LR = $5\times10^{-4}$, WD = $0.05$). Left: smoothed training loss. Middle: validation loss on C4. Right: convergence speedup vs. dense baseline. The MoE variants reach 5.3–5.5× convergence speedup over dense.</figcaption>
   </figure>
 
+  <p>One additional observation from these large-scale runs deserves attention: pretraining with Complete-muE is <strong>remarkably stable</strong>. Across both the diffusion and LLM settings, training-loss and gradient-norm traces remain smooth throughout the entire run — virtually free of spikes. A well-calibrated hyperparameter setting does not just improve final loss; it also keeps the optimizer in a well-behaved regime where per-step updates are neither too aggressive nor too conservative, avoiding the erratic dynamics that can otherwise force costly mid-run interventions or restarts at large MoE scale.</p>
+
   <h3>Downstream benchmarks confirm the loss gain</h3>
   <p>The training-loss advantage translates into downstream-task quality. After the same 100k-step LM training, both MoE variants substantially improve the dense baseline's average across 13 LM benchmarks:</p>
 
