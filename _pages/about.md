@@ -19,7 +19,7 @@ I am generally interested in Large Language Model, Image/Video Generation, effic
 Recent News
 ======
 
-*05/2026 We release the paper blog for [Complete-muE](/paper_blogs/complete_mue/): Optimal Hyperparameter Transfer and Scaling for MoE Models. Tune a small dense FFN proxy once and transfer learning rate, weight decay, and init to any large MoE architecture — up to **4.5× video** and **5.3–5.5× LLM** convergence speedup.* \[[Blog](/paper_blogs/complete_mue/)\].
+*05/2026 We release the paper [Complete-muE](https://arxiv.org/abs/2605.23893): Optimal Hyperparameter Transfer and Scaling for MoE Models. Tune a small dense FFN proxy once and transfer learning rate, weight decay, and init to any large MoE architecture — up to **4.5× video** and **5.3–5.5× LLM** convergence speedup.* \[[Blog](/paper_blogs/complete_mue/)\].
 
 *09/2024 Our paper [LoT](https://arxiv.org/abs/2402.02769) regularization for improving the generalization of model training has been accepted by  **NeurIPS 24**. LoT is proved to be highly effective accross tasks such as LLM finetune, Game RL, Small LM pretraining, and Image Classification* \[[Code](https://github.com/jincan333/LoT)\].
 
